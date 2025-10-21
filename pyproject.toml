@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fake-news-detector"
+version = "0.1.0"
+description = "Transformer-based fake news detector (BERT/RoBERTa) with Streamlit UI and FastAPI API"
+requires-python = ">=3.10"
+readme = "README.md"
+authors = [{ name = "Your Name" }]
+dependencies = []
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

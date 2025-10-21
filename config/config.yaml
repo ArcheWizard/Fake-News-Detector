@@ -1,0 +1,22 @@
+# High-level defaults; override via CLI args if needed
+seed: 42
+model_name: roberta-base
+max_seq_length: 256
+train:
+  epochs: 3
+  batch_size: 16
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+eval:
+  metrics: ["f1", "precision", "recall", "roc_auc"]
+data:
+  dataset: kaggle_fake_real
+  text_field: "text"
+  label_field: "label"   # 1 = fake, 0 = real
+  val_size: 0.1
+  test_size: 0.1
+paths:
+  data_dir: "data"
+  runs_dir: "runs"
+  models_dir: "models"
