@@ -1,9 +1,10 @@
 import argparse
 import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union, cast
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from fnd.models.utils import create_classification_pipeline
 
@@ -115,20 +116,31 @@ def app():
     if st.session_state.true_label is not None:
         st.info(f"True label: **{st.session_state.true_label}**")
 
+    # Explainability options
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Explainability (optional)")
+    use_lime = st.sidebar.checkbox("Show LIME explanation", value=False)
+    use_shap = st.sidebar.checkbox("Show SHAP explanation", value=False)
+
     if st.button("Predict") and text.strip():
         outputs = clf(text)
 
         # Type-safe handling of pipeline output
         if isinstance(outputs, list) and len(outputs) > 0:
-                output_list: List[Dict[str, Any]] = outputs[0]  # Explicit type hint
-                # Sort by label for consistent display
-                sorted_outputs = sorted(output_list, key=lambda x: str(x.get("label", "")))
+            # outputs can be either List[Dict[str, Any]] (top-1) or List[List[Dict[str, Any]]] (all scores)
+            first_item: Union[Dict[str, Any], List[Dict[str, Any]]] = outputs[0]
+            if isinstance(first_item, dict):
+                output_list: List[Dict[str, Any]] = [cast(Dict[str, Any], first_item)]
+            else:
+                output_list = cast(List[Dict[str, Any]], first_item)
+            # Sort by label for consistent display
+            sorted_outputs = sorted(output_list, key=lambda x: str(x.get("label", "")))
 
             # Display all scores
-                scores_dict = {
-                    str(item.get("label", "")): round(float(item.get("score", 0)), 4)
-                    for item in sorted_outputs
-                }
+            scores_dict = {
+                str(item.get("label", "")): round(float(item.get("score", 0)), 4)
+                for item in sorted_outputs
+            }
             st.write("**Prediction Scores:**", scores_dict)
 
             # Get top prediction
@@ -145,6 +157,27 @@ def app():
                     st.error(f"❌ Predicted: **{label_str}** (p={score_float:.3f}) - Expected: {true_label}")
             else:
                 st.success(f"Predicted: **{label_str}** (p={score_float:.3f})")
+
+            # Optional explainability
+            if use_lime:
+                try:
+                    from fnd.explain.lime_explain import explain_text_with_lime
+                    exp, html = explain_text_with_lime(args.model_dir, text, max_seq_length=256)
+                    if html:
+                        st.subheader("LIME Explanation")
+                        components.html(html, height=400, scrolling=True)
+                except Exception as e:  # noqa: BLE001
+                    st.warning(f"LIME explanation unavailable: {e}")
+
+            if use_shap:
+                try:
+                    from fnd.explain.shap_explain import explain_text_with_shap
+                    explanation, _ = explain_text_with_shap(args.model_dir, text, max_seq_length=256)
+                    if explanation is not None:
+                        st.subheader("SHAP Explanation")
+                        st.write(explanation)
+                except Exception as e:  # noqa: BLE001
+                    st.warning(f"SHAP explanation unavailable: {e}")
 
 
 if __name__ == "__main__":
