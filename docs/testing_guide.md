@@ -72,7 +72,7 @@ You can also:
 
 ### Prediction Display
 
-```
+```text
 Prediction Scores: {'fake': 0.0234, 'real': 0.9766}
 ✅ Predicted: real (p=0.977) - CORRECT
 ```

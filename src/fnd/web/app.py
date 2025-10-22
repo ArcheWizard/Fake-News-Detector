@@ -3,18 +3,18 @@ import json
 import os
 
 import streamlit as st
-from transformers import pipeline
+
+from fnd.models.utils import create_classification_pipeline
 
 
 @st.cache_resource
 def load_pipeline(model_dir: str):
-    return pipeline(
-        "text-classification",
-        model=model_dir,
-        tokenizer=model_dir,
-        top_k=None,
-        truncation=True,
-        max_length=256
+    """Load classification pipeline using centralized utility."""
+    return create_classification_pipeline(
+        model_dir=model_dir,
+        max_length=256,
+        device=None,  # Auto-detect
+        return_all_scores=True
     )
 
 

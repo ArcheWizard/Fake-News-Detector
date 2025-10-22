@@ -13,6 +13,7 @@ from transformers import (
     TrainingArguments,
 )
 
+from fnd.config import FNDConfig
 from fnd.data.datasets import load_dataset
 from fnd.models.factory import load_model_and_tokenizer
 from fnd.training.metrics import compute_metrics
@@ -24,28 +25,33 @@ def tokenize_function(tokenizer, examples, max_length: int):
 
 def main():
     parser = argparse.ArgumentParser(description="Train a Transformer model for fake news detection")
-    parser.add_argument("--model", required=True, help="HF model name, e.g., roberta-base")
-    parser.add_argument("--dataset", required=True, choices=["kaggle_fake_real"], help="Dataset identifier")
-    parser.add_argument("--data_dir", required=True, help="Directory with processed/raw dataset files")
-    parser.add_argument("--out_dir", required=True, help="Output directory for run artifacts")
-    parser.add_argument("--epochs", type=float, default=3)
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--lr", type=float, default=2e-5)
-    parser.add_argument("--weight_decay", type=float, default=0.01)
-    parser.add_argument("--max_seq_length", type=int, default=256)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--max_samples", type=int, default=None)
+    parser.add_argument("--config", default="config/config.yaml", help="Path to YAML config file")
+    parser.add_argument("--run_name", default="default-run", help="Name for this training run")
+    parser.add_argument("--model_name", help="Override model name")
+    parser.add_argument("--data_dataset", help="Override dataset name")
+    parser.add_argument("--paths_data_dir", help="Override data directory")
+    parser.add_argument("--train_epochs", type=int, help="Override training epochs")
+    parser.add_argument("--train_batch_size", type=int, help="Override batch size")
+    parser.add_argument("--train_learning_rate", type=float, help="Override learning rate")
+    parser.add_argument("--data_max_samples", type=int, help="Override max samples")
+    parser.add_argument("--seed", type=int, help="Override random seed")
     args = parser.parse_args()
 
-    os.makedirs(args.out_dir, exist_ok=True)
+    # Load config from YAML with CLI overrides
+    overrides = {k: v for k, v in vars(args).items() if v is not None and k not in ("config", "run_name")}
+    config = FNDConfig.from_yaml_with_overrides(args.config, **overrides)
+
+    # Create output directory for this run
+    output_dir = os.path.join(config.paths.runs_dir, args.run_name)
+    os.makedirs(output_dir, exist_ok=True)
 
     bundle = load_dataset(
-        args.dataset,
-        args.data_dir,
-        seed=args.seed,
-        val_size=0.1,
-        test_size=0.1,
-        max_samples=args.max_samples,
+        config.data.dataset,
+        config.paths.data_dir,
+        seed=config.seed,
+        val_size=config.data.val_size,
+        test_size=config.data.test_size,
+        max_samples=config.data.max_samples,
     )
 
     # Convert to HF Datasets
@@ -54,31 +60,35 @@ def main():
     test_ds = Dataset.from_pandas(bundle.test_df)
 
     tokenizer, model = load_model_and_tokenizer(
-        args.model,
+        config.model_name,
         num_labels=len(bundle.id2label),
         id2label=bundle.id2label,
         label2id=bundle.label2id,
     )
 
-    tokenized_train = train_ds.map(lambda x: tokenize_function(tokenizer, x, args.max_seq_length), batched=True)
-    tokenized_val = val_ds.map(lambda x: tokenize_function(tokenizer, x, args.max_seq_length), batched=True)
-    tokenized_test = test_ds.map(lambda x: tokenize_function(tokenizer, x, args.max_seq_length), batched=True)
+    tokenized_train = train_ds.map(lambda x: tokenize_function(tokenizer, x, config.max_seq_length), batched=True)
+    tokenized_val = val_ds.map(lambda x: tokenize_function(tokenizer, x, config.max_seq_length), batched=True)
+    tokenized_test = test_ds.map(lambda x: tokenize_function(tokenizer, x, config.max_seq_length), batched=True)
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     training_args = TrainingArguments(
-        output_dir=args.out_dir,
-        num_train_epochs=args.epochs,
-        per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,
-        learning_rate=args.lr,
-        weight_decay=args.weight_decay,
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        logging_strategy="epoch",
-        load_best_model_at_end=True,
-        metric_for_best_model="f1",
-        seed=args.seed,
+        output_dir=output_dir,
+        num_train_epochs=config.train.epochs,
+        per_device_train_batch_size=config.train.batch_size,
+        per_device_eval_batch_size=config.eval.batch_size,
+        learning_rate=config.train.learning_rate,
+        weight_decay=config.train.weight_decay,
+        warmup_ratio=config.train.warmup_ratio,
+        gradient_accumulation_steps=config.train.gradient_accumulation_steps,
+        max_grad_norm=config.train.max_grad_norm,
+        fp16=config.train.fp16,
+        eval_strategy=config.train.evaluation_strategy,
+        save_strategy=config.train.save_strategy,
+        logging_steps=config.train.logging_steps,
+        load_best_model_at_end=config.train.load_best_model_at_end,
+        metric_for_best_model=config.train.metric_for_best_model,
+        seed=config.seed,
         report_to=["none"],
     )
 
@@ -98,13 +108,16 @@ def main():
     eval_test = trainer.evaluate(eval_dataset=tokenized_test)
 
     # Save model and tokenizer
-    model_dir = os.path.join(args.out_dir, "model")
+    model_dir = os.path.join(output_dir, "model")
     os.makedirs(model_dir, exist_ok=True)
     trainer.save_model(model_dir)
     tokenizer.save_pretrained(model_dir)
 
+    # Save configuration
+    config.to_yaml(os.path.join(output_dir, "config.yaml"))
+
     # Save metrics and label map
-    results_path = os.path.join(args.out_dir, "results.json")
+    results_path = os.path.join(output_dir, "results.json")
     with open(results_path, "w") as f:
         json.dump({"eval_val": eval_val, "eval_test": eval_test}, f, indent=2)
     with open(os.path.join(model_dir, "label_map.json"), "w") as f:

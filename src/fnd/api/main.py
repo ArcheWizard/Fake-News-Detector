@@ -1,9 +1,11 @@
 import os
+import os
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from transformers import pipeline
+
+from fnd.models.utils import create_classification_pipeline
 
 
 app = FastAPI(title="Fake News Detector API")
@@ -18,6 +20,7 @@ class PredictRequest(BaseModel):
 
 
 def _ensure_pipeline(model_dir: Optional[str] = None):
+    """Load pipeline using centralized utility."""
     global _clf, _model_dir
     if _clf is not None:
         return _clf
@@ -25,7 +28,12 @@ def _ensure_pipeline(model_dir: Optional[str] = None):
     if not model_dir or not os.path.isdir(model_dir):
         raise RuntimeError("MODEL_DIR is not set or invalid. Provide via env or request body.")
     _model_dir = model_dir
-    _clf = pipeline("text-classification", model=model_dir, tokenizer=model_dir, return_all_scores=True)
+    _clf = create_classification_pipeline(
+        model_dir=model_dir,
+        max_length=256,
+        device=None,  # Auto-detect
+        return_all_scores=True
+    )
     return _clf
 
 

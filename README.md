@@ -75,12 +75,12 @@ python -m fnd.eval.evaluate \
 python scripts/extract_test_samples.py \
   --data_dir data/processed/kaggle_fake_real \
   --num_samples 20 \
-  --out_file test_samples.json
+  --out_file data/test/test_samples.json
 
 # 5) Web app (Streamlit) - with test samples
 streamlit run src/fnd/web/app.py -- \
   --model_dir runs/roberta-kfr/model \
-  --samples_file test_samples.json
+  --samples_file data/test/test_samples.json
 
 # 6) Web app (Streamlit) - without test samples
 streamlit run src/fnd/web/app.py -- \
