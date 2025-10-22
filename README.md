@@ -71,10 +71,22 @@ python -m fnd.eval.evaluate \
   --model_dir runs/roberta-kfr/model \
   --out_dir runs/roberta-kfr
 
-# 4) Web app (Streamlit)
-streamlit run src/fnd/web/app.py -- --model_dir runs/roberta-kfr/model
+# 4) Extract test samples for manual testing (optional but recommended)
+python scripts/extract_test_samples.py \
+  --data_dir data/processed/kaggle_fake_real \
+  --num_samples 20 \
+  --out_file test_samples.json
 
-# 5) API (FastAPI)
+# 5) Web app (Streamlit) - with test samples
+streamlit run src/fnd/web/app.py -- \
+  --model_dir runs/roberta-kfr/model \
+  --samples_file test_samples.json
+
+# 6) Web app (Streamlit) - without test samples
+streamlit run src/fnd/web/app.py -- \
+  --model_dir runs/roberta-kfr/model
+
+# 7) API (FastAPI)
 uvicorn fnd.api.main:app --reload --port 8000
 ```
 
