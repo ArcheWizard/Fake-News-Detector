@@ -1,6 +1,6 @@
 import os
 import os
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -64,7 +64,7 @@ def predict(req: PredictRequest):
 
     # Type-safe handling of pipeline output
     if isinstance(outputs, list) and len(outputs) > 0:
-        output_list = outputs[0]
+        output_list: List[Dict[str, Any]] = outputs[0]  # Explicit type hint
         # Sort by label for deterministic order
         sorted_outputs = sorted(output_list, key=lambda x: str(x.get("label", "")))
         top = max(sorted_outputs, key=lambda x: float(x.get("score", 0)))

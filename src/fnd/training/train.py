@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 from functools import partial
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -103,9 +104,9 @@ def main():
 
     trainer.train()
 
-    # Evaluate on validation and test
-    eval_val = trainer.evaluate(eval_dataset=tokenized_val)
-    eval_test = trainer.evaluate(eval_dataset=tokenized_test)
+    # Evaluate on validation and test - cast to satisfy type checker
+    eval_val = trainer.evaluate(eval_dataset=cast(Any, tokenized_val))
+    eval_test = trainer.evaluate(eval_dataset=cast(Any, tokenized_test))
 
     # Save model and tokenizer
     model_dir = os.path.join(output_dir, "model")

@@ -210,15 +210,15 @@ class FNDConfig:
         Example:
             >>> config = FNDConfig.from_yaml("config/config.yaml")
         """
-        yaml_path = Path(yaml_path).expanduser()
-        if not yaml_path.exists():
-            raise ConfigurationError(f"Configuration file not found: {yaml_path}")
+        yaml_path_obj = Path(yaml_path).expanduser()
+        if not yaml_path_obj.exists():
+            raise ConfigurationError(f"Configuration file not found: {yaml_path_obj}")
 
         try:
-            with open(yaml_path) as f:
+            with open(yaml_path_obj) as f:
                 config_dict = yaml.safe_load(f)
         except yaml.YAMLError as e:
-            raise ConfigurationError(f"Invalid YAML in {yaml_path}: {e}") from e
+            raise ConfigurationError(f"Invalid YAML in {yaml_path_obj}: {e}") from e
 
         if config_dict is None:
             config_dict = {}
@@ -307,8 +307,8 @@ class FNDConfig:
             >>> config = FNDConfig()
             >>> config.to_yaml("output/config.yaml")
         """
-        yaml_path = Path(yaml_path).expanduser()
-        yaml_path.parent.mkdir(parents=True, exist_ok=True)
+        yaml_path_obj = Path(yaml_path).expanduser()
+        yaml_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(yaml_path, 'w') as f:
+        with open(yaml_path_obj, 'w') as f:
             yaml.dump(self.to_dict(), f, default_flow_style=False, sort_keys=False)

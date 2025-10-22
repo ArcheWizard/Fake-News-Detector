@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 from datetime import datetime
+from typing import Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -84,7 +85,8 @@ def main():
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     trainer = Trainer(model=model, data_collator=data_collator, compute_metrics=compute_metrics)
-    metrics = trainer.evaluate(tokenized_test)
+    # Cast to satisfy type checker
+    metrics = trainer.evaluate(cast(Any, tokenized_test))
 
     # Save metrics
     with open(os.path.join(args.out_dir, "metrics.json"), "w") as f:
@@ -95,7 +97,8 @@ def main():
 
     # Confusion matrix and ROC curve (if configured to save plots)
     if config.eval.save_plots:
-        preds_output = trainer.predict(tokenized_test)
+        # Cast to satisfy type checker
+        preds_output = trainer.predict(cast(Any, tokenized_test))
 
         # Handle predictions - take first element if tuple
         predictions = preds_output.predictions

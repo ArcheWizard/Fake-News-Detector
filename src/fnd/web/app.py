@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from typing import Any, Dict, List
 
 import streamlit as st
 
@@ -119,12 +120,15 @@ def app():
 
         # Type-safe handling of pipeline output
         if isinstance(outputs, list) and len(outputs) > 0:
-            output_list = outputs[0]
-            # Sort by label for consistent display
-            sorted_outputs = sorted(output_list, key=lambda x: str(x.get("label", "")))
+                output_list: List[Dict[str, Any]] = outputs[0]  # Explicit type hint
+                # Sort by label for consistent display
+                sorted_outputs = sorted(output_list, key=lambda x: str(x.get("label", "")))
 
             # Display all scores
-            scores_dict = {str(o.get("label", "")): round(float(o.get("score", 0)), 4) for o in sorted_outputs}
+                scores_dict = {
+                    str(item.get("label", "")): round(float(item.get("score", 0)), 4)
+                    for item in sorted_outputs
+                }
             st.write("**Prediction Scores:**", scores_dict)
 
             # Get top prediction

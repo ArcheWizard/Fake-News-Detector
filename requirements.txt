@@ -26,3 +26,8 @@ typer
 # Testing
 pytest
 pytest-cov
+
+# Type stubs for better IDE support
+types-pytest
+types-PyYAML
+types-requests
