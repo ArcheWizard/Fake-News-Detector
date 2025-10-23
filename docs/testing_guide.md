@@ -4,6 +4,8 @@ This guide explains how to test model accuracy using the enhanced Streamlit web 
 
 ## Quick Start
 
+Prerequisite: ensure you've prepared the processed dataset at `data/processed/kaggle_fake_real/dataset.csv` (see README or `python -m fnd.data.prepare ...`).
+
 ### 1. Extract Test Samples
 
 First, create a JSON file with sample test examples from your dataset:
@@ -23,7 +25,7 @@ Run the Streamlit app with both the model directory and samples file:
 
 ```bash
 streamlit run src/fnd/web/app.py -- \
-  --model_dir runs/roberta-kfr/model \
+  --model_dir runs/my-experiment/model \
   --samples_file data/test/test_samples.json
 ```
 

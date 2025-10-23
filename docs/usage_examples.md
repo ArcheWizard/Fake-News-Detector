@@ -38,6 +38,35 @@ python -m fnd.training.train \
   --train_epochs 1
 ```
 
+### Use Profiles (presets)
+
+Apply a profile overlay from `config/profiles/` to quickly adapt settings:
+
+```bash
+# Fast iteration (1 epoch, shorter seq length)
+python -m fnd.training.train \
+  --config config/config.yaml \
+  --profile fast \
+  --run_name roberta-fast \
+  --paths_data_dir data/processed/kaggle_fake_real
+
+# Memory-friendly (small batch, checkpointing)
+python -m fnd.training.train \
+  --config config/config.yaml \
+  --profile memory \
+  --run_name roberta-mem \
+  --paths_data_dir data/processed/kaggle_fake_real
+
+# Distilled backbone (distilbert)
+python -m fnd.training.train \
+  --config config/config.yaml \
+  --profile distil \
+  --run_name distil-fast \
+  --paths_data_dir data/processed/kaggle_fake_real
+```
+
+CLI flags still override any profile values.
+
 ## Evaluation
 
 ### Basic Evaluation (with config)
@@ -77,6 +106,41 @@ streamlit run src/fnd/web/app.py -- \
   --model_dir runs/my-experiment/model \
   --samples_file data/test/test_samples.json
 ```
+
+Enable optional explainers (SHAP/LIME) via the sidebar toggles. Install `shap` and `lime` to activate.
+
+## Optimization Utilities
+
+Post-training speed-ups for CPU inference:
+
+```bash
+# Quantize (dynamic) to qint8
+python -m fnd.models.optimization --model_dir runs/my-experiment/model --out_dir runs/my-experiment/model-quant --mode quantize
+
+# Prune Linear layers by 20%
+python -m fnd.models.optimization --model_dir runs/my-experiment/model --out_dir runs/my-experiment/model-pruned --mode prune --amount 0.2
+```
+
+## Experiment Tracking
+
+Optionally report metrics to integrations supported by Hugging Face Trainer. Set the env var before training:
+
+```bash
+export FND_REPORT_TO=wandb           # or mlflow, or "wandb,mlflow"
+python -m fnd.training.train --config config/config.yaml --run_name my-exp
+```
+
+Install the corresponding clients separately (e.g., `pip install wandb mlflow`).
+
+## Multilingual Models
+
+Use a multilingual backbone by setting `model_name` in your config, e.g.:
+
+```yaml
+model_name: bert-base-multilingual-cased
+```
+
+No additional code changes required.
 
 ## API Server
 

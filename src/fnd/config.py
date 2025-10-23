@@ -49,6 +49,13 @@ class TrainConfig:
     logging_steps: int = 100
     load_best_model_at_end: bool = True
     metric_for_best_model: str = "f1"
+    # Advanced knobs
+    lr_scheduler_type: str = "linear"  # linear | cosine | cosine_with_restarts | polynomial | constant | constant_with_warmup
+    dataloader_num_workers: int = 0
+    gradient_checkpointing: bool = False
+    bf16: bool = False
+    torch_compile: bool = False
+    optim: str = "adamw_torch"  # common fast default
 
     def __post_init__(self):
         """Validate training configuration."""
@@ -64,6 +71,23 @@ class TrainConfig:
             raise ConfigurationError(f"save_strategy must be 'epoch', 'steps', or 'no', got {self.save_strategy}")
         if self.evaluation_strategy not in {"epoch", "steps", "no"}:
             raise ConfigurationError(f"evaluation_strategy must be 'epoch', 'steps', or 'no', got {self.evaluation_strategy}")
+        valid_schedulers = {
+            "linear",
+            "cosine",
+            "cosine_with_restarts",
+            "polynomial",
+            "constant",
+            "constant_with_warmup",
+        }
+        if self.lr_scheduler_type not in valid_schedulers:
+            raise ConfigurationError(
+                f"lr_scheduler_type must be one of {valid_schedulers}, got {self.lr_scheduler_type}"
+            )
+        if self.dataloader_num_workers < 0:
+            raise ConfigurationError(f"dataloader_num_workers must be >= 0, got {self.dataloader_num_workers}")
+        valid_optims = {"adamw_torch", "adamw_hf", "adamw_torch_fused", "adafactor"}
+        if self.optim not in valid_optims:
+            raise ConfigurationError(f"optim must be one of {valid_optims}, got {self.optim}")
 
 
 @dataclass

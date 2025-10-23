@@ -1,0 +1,20 @@
+# Distilled model preset (smaller/faster)
+# Switches to a distilled backbone and reduces sequence length
+model_name: distilbert-base-uncased
+max_seq_length: 192
+train:
+  epochs: 2
+  batch_size: 32
+  learning_rate: 3.0e-5
+  warmup_ratio: 0.06
+  evaluation_strategy: "epoch"
+  save_strategy: "epoch"
+  logging_steps: 50
+  gradient_accumulation_steps: 1
+  dataloader_num_workers: 2
+  lr_scheduler_type: "linear"
+  gradient_checkpointing: false
+  fp16: false
+  bf16: false
+  optim: "adamw_torch"
+  torch_compile: false

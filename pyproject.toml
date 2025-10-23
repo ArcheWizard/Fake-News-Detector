@@ -11,6 +11,16 @@ readme = "README.md"
 authors = [{ name = "Your Name" }]
 dependencies = []
 
+[project.optional-dependencies]
+explain = [
+	"shap",
+	"lime",
+]
+tracking = [
+	"wandb",
+	"mlflow",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 

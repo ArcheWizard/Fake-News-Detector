@@ -13,9 +13,6 @@ streamlit
 fastapi
 uvicorn
 
-shap
-lime
-
 requests
 trafilatura
 beautifulsoup4

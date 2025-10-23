@@ -7,6 +7,7 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 from datasets import Dataset
+import yaml
 from transformers import (
     AutoTokenizer,
     DataCollatorWithPadding,
@@ -28,6 +29,7 @@ def main():
     parser = argparse.ArgumentParser(description="Train a Transformer model for fake news detection")
     parser.add_argument("--config", default="config/config.yaml", help="Path to YAML config file")
     parser.add_argument("--run_name", default="default-run", help="Name for this training run")
+    parser.add_argument("--profile", help="Optional training profile to apply (e.g., fast, memory, distil)")
     parser.add_argument("--model_name", help="Override model name")
     parser.add_argument("--data_dataset", help="Override dataset name")
     parser.add_argument("--paths_data_dir", help="Override data directory")
@@ -38,9 +40,30 @@ def main():
     parser.add_argument("--seed", type=int, help="Override random seed")
     args = parser.parse_args()
 
-    # Load config from YAML with CLI overrides
-    overrides = {k: v for k, v in vars(args).items() if v is not None and k not in ("config", "run_name")}
-    config = FNDConfig.from_yaml_with_overrides(args.config, **overrides)
+    # Build overrides from CLI, profile overlay first (so CLI wins)
+    def _flatten(prefix: str, obj: Any, out: dict):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                _flatten(f"{prefix}_{k}" if prefix else k, v, out)
+        else:
+            out[prefix] = obj
+
+    profile_overrides: dict[str, Any] = {}
+    if args.profile:
+        profile_dir = os.path.join(os.path.dirname(args.config), "profiles")
+        profile_path = os.path.join(profile_dir, f"{args.profile}.yaml")
+        if os.path.isfile(profile_path):
+            with open(profile_path, "r") as pf:
+                profile_dict = yaml.safe_load(pf) or {}
+            _flatten("", profile_dict, profile_overrides)
+        else:
+            print(f"[warn] Profile '{args.profile}' not found at {profile_path}; continuing without it")
+
+    cli_overrides = {k: v for k, v in vars(args).items() if v is not None and k not in ("config", "run_name", "profile")}
+    merged_overrides = {**profile_overrides, **cli_overrides}
+
+    # Load config from YAML with merged overrides (profile < CLI)
+    config = FNDConfig.from_yaml_with_overrides(args.config, **merged_overrides)
 
     # Create output directory for this run
     output_dir = os.path.join(config.paths.runs_dir, args.run_name)
@@ -73,6 +96,13 @@ def main():
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
+    # Optional experiment tracking integrations via env var
+    report_to_env = os.getenv("FND_REPORT_TO")
+    if report_to_env:
+        report_to = [s.strip() for s in report_to_env.split(",") if s.strip()]
+    else:
+        report_to = ["none"]
+
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=config.train.epochs,
@@ -84,13 +114,20 @@ def main():
         gradient_accumulation_steps=config.train.gradient_accumulation_steps,
         max_grad_norm=config.train.max_grad_norm,
         fp16=config.train.fp16,
-        eval_strategy=config.train.evaluation_strategy,
+        bf16=config.train.bf16,
+    eval_strategy=config.train.evaluation_strategy,
         save_strategy=config.train.save_strategy,
         logging_steps=config.train.logging_steps,
         load_best_model_at_end=config.train.load_best_model_at_end,
         metric_for_best_model=config.train.metric_for_best_model,
         seed=config.seed,
-        report_to=["none"],
+        report_to=report_to,
+        run_name=args.run_name,
+        lr_scheduler_type=config.train.lr_scheduler_type,
+        dataloader_num_workers=config.train.dataloader_num_workers,
+        gradient_checkpointing=config.train.gradient_checkpointing,
+        optim=config.train.optim,
+        torch_compile=config.train.torch_compile,
     )
 
     trainer = Trainer(

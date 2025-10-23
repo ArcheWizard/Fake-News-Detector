@@ -1,0 +1,19 @@
+# Fast training preset (quick iteration)
+# Good for sanity checks and quick experiments
+max_seq_length: 192
+train:
+  epochs: 1
+  batch_size: 16
+  learning_rate: 3.0e-5
+  warmup_ratio: 0.0
+  evaluation_strategy: "epoch"
+  save_strategy: "epoch"
+  logging_steps: 50
+  gradient_accumulation_steps: 1
+  dataloader_num_workers: 2
+  lr_scheduler_type: "linear"
+  gradient_checkpointing: false
+  fp16: false
+  bf16: false
+  optim: "adamw_torch"
+  torch_compile: false

@@ -1,0 +1,30 @@
+# Lightweight image for Streamlit web app
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/app/src
+
+WORKDIR /app
+
+# Install system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install python deps
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source and docs
+COPY src ./src
+COPY docs ./docs
+
+# Defaults: mount your model and optional samples file
+ENV MODEL_DIR=/models \
+    SAMPLES_FILE=/app/docs/test_samples.json
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "src/fnd/web/app.py", "--", "--model_dir", "/models", "--samples_file", "/app/docs/test_samples.json"]

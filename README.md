@@ -37,9 +37,137 @@ source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Optional extras (choose if needed)
+# pip install -r requirements-explain.txt   # SHAP & LIME for explainability
+# pip install -r requirements-tracking.txt  # W&B & MLflow for experiment tracking
+# or install project extras:
+# pip install -e .[explain]
+# pip install -e .[tracking]
 ```
 
 ## Quickstart
+
+### 0) Prepare the dataset (required)
+
+This project expects either a processed CSV at `data/processed/kaggle_fake_real/dataset.csv` or the raw Kaggle files under `data/raw/kaggle_fake_real`.
+
+```bash
+# Create folders
+mkdir -p data/raw/kaggle_fake_real data/processed/kaggle_fake_real
+
+# Place the Kaggle files here first:
+#   data/raw/kaggle_fake_real/True.csv
+#   data/raw/kaggle_fake_real/Fake.csv
+
+# Normalize to a single processed CSV
+python -m fnd.data.prepare \
+  --dataset kaggle_fake_real \
+  --in_dir data/raw/kaggle_fake_real \
+  --out_dir data/processed/kaggle_fake_real
+```
+
+If you already have a processed dataset.csv elsewhere, set `paths.data_dir` in your config or pass `--paths_data_dir` at the CLI.
+
+### Train with config and optional tracking
+
+Use the YAML config and optionally enable experiment tracking backends supported by Hugging Face Trainer (e.g., W&B, MLflow) via an env var:
+
+```bash
+# Ensure your config points to the processed directory (see below), or pass it via CLI
+python -m fnd.training.train \
+  --config config/config.yaml \
+  --run_name my-experiment \
+  --paths_data_dir data/processed/kaggle_fake_real
+
+# Optional: report metrics to integrations (install their clients separately)
+# export FND_REPORT_TO=wandb        # or mlflow, or "wandb,mlflow"
+```
+
+### Use training profiles (presets)
+
+Speed up iteration or fit low-memory devices by applying a profile overlay. Profiles live under `config/profiles/` and can tweak model/training knobs without editing your base config.
+
+Provided presets:
+
+- `fast` – 1 epoch, shorter sequence length, quick sanity checks
+- `memory` – smaller batch, gradient checkpointing, fewer workers
+- `distil` – switches to `distilbert-base-uncased`, shorter sequence length
+
+Usage:
+
+```bash
+python -m fnd.training.train \
+  --config config/config.yaml \
+  --profile fast \
+  --run_name quick-test \
+  --paths_data_dir data/processed/kaggle_fake_real
+```
+
+Profiles are merged first; any CLI flags you pass still take precedence over the profile.
+
+### Evaluate a saved run
+
+```bash
+python -m fnd.eval.evaluate \
+  --config config/config.yaml \
+  --model_dir runs/roberta-kfr/model \
+  --out_dir runs/roberta-kfr/eval \
+  --paths_data_dir data/processed/kaggle_fake_real
+```
+
+### Explainability UI (Streamlit)
+
+The Streamlit app includes optional SHAP/LIME explainers (toggle in sidebar). These are optional dependencies; install `shap` and `lime` to enable.
+
+```bash
+streamlit run src/fnd/web/app.py -- \
+  --model_dir runs/roberta-kfr/model \
+  --samples_file data/test/test_samples.json
+```
+
+### Multilingual support (mBERT)
+
+Set `model_name` to a multilingual model (e.g., `bert-base-multilingual-cased`) in your config to classify non-English text. No other code changes required.
+
+```yaml
+model_name: bert-base-multilingual-cased
+```
+
+### Model optimization (quantization/pruning)
+
+Speed up CPU inference with dynamic quantization or try simple pruning. These write an optimized model directory you can serve with the API/UI:
+
+```bash
+# Quantize (dynamic) to qint8
+python -m fnd.models.optimization --model_dir runs/roberta-kfr/model --out_dir runs/roberta-kfr/model-quant --mode quantize
+
+# Prune Linear layers by 20%
+python -m fnd.models.optimization --model_dir runs/roberta-kfr/model --out_dir runs/roberta-kfr/model-pruned --mode prune --amount 0.2
+```
+
+### Dockerized serving
+
+Container images are provided for the API (FastAPI) and web app (Streamlit).
+
+```bash
+# Build and run both services
+docker compose up --build
+
+# API: http://localhost:8000/docs
+# Web: http://localhost:8501
+```
+
+Mount your trained model into `./runs/roberta-kfr/model` or adjust `docker-compose.yml` to point to your model path.
+
+To select a different run without editing compose, copy `.env.example` to `.env` and adjust values:
+
+```bash
+cp .env.example .env
+# then edit .env
+# MODEL_RUN=my-experiment
+# MODEL_SUBDIR=model-quant
+```
 
 The project now uses a YAML-based configuration system with optional CLI overrides for maximum flexibility.
 
@@ -56,7 +184,8 @@ python -m fnd.data.prepare \
 # 2) Train (using config file with optional overrides)
 python -m fnd.training.train \
   --config config/config.yaml \
-  --run_name my-experiment
+  --run_name my-experiment \
+  --paths_data_dir data/processed/kaggle_fake_real
 
 # Or with CLI overrides:
 python -m fnd.training.train \
@@ -71,7 +200,8 @@ python -m fnd.training.train \
 python -m fnd.eval.evaluate \
   --config config/config.yaml \
   --model_dir runs/my-experiment/model \
-  --out_dir runs/my-experiment
+  --out_dir runs/my-experiment \
+  --paths_data_dir data/processed/kaggle_fake_real
 
 # Or without config (backward compatible):
 python -m fnd.eval.evaluate \
@@ -94,6 +224,11 @@ streamlit run src/fnd/web/app.py -- \
 # 6) API (FastAPI)
 export MODEL_DIR=runs/my-experiment/model
 uvicorn fnd.api.main:app --reload --port 8000
+
+# Troubleshooting
+# If you see DataLoadError about missing CSVs, ensure your data is under:
+#   data/processed/kaggle_fake_real/dataset.csv (preferred), or
+#   data/raw/kaggle_fake_real/True.csv and Fake.csv (then run the prepare step above)
 ```
 
 See [docs/usage_examples.md](docs/usage_examples.md) for more examples and [docs/migration_guide.md](docs/migration_guide.md) for migrating from the old CLI.

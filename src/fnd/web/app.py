@@ -162,10 +162,19 @@ def app():
             if use_lime:
                 try:
                     from fnd.explain.lime_explain import explain_text_with_lime
-                    exp, html = explain_text_with_lime(args.model_dir, text, max_seq_length=256)
+                    with st.spinner("Computing LIME explanation..."):
+                        exp, html = explain_text_with_lime(
+                            args.model_dir,
+                            text,
+                            max_seq_length=256,
+                            num_features=10,
+                            num_samples=400,  # tune for speed/quality
+                        )
                     if html:
                         st.subheader("LIME Explanation")
                         components.html(html, height=400, scrolling=True)
+                    else:
+                        st.info("LIME produced no HTML output for this text.")
                 except Exception as e:  # noqa: BLE001
                     st.warning(f"LIME explanation unavailable: {e}")
 
@@ -176,6 +185,8 @@ def app():
                     if explanation is not None:
                         st.subheader("SHAP Explanation")
                         st.write(explanation)
+                    else:
+                        st.info("SHAP produced no explanation for this text.")
                 except Exception as e:  # noqa: BLE001
                     st.warning(f"SHAP explanation unavailable: {e}")
 

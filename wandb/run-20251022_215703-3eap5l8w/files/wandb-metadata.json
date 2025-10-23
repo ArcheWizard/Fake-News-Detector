@@ -1,0 +1,46 @@
+{
+  "os": "Linux-6.8.0-86-generic-x86_64-with-glibc2.39",
+  "python": "CPython 3.13.3",
+  "startedAt": "2025-10-22T20:57:03.196966Z",
+  "args": [
+    "--config",
+    "config/config.yaml",
+    "--run_name",
+    "my-experiment",
+    "--paths_data_dir",
+    "data/processed/kaggle_fake_real"
+  ],
+  "program": "-m fnd.training.train",
+  "git": {
+    "remote": "https://github.com/ArcheWizard/Fake-News-Detector.git",
+    "commit": "fc2d864c1a6e7c7d33e02668a16f240803a3ac19"
+  },
+  "email": "faress22.dadi@gmail.com",
+  "root": "/home/arche-mage/Coding/Python/MyProjects/Fake-News-Detector",
+  "host": "arche-mage-LOQ-15IAX9E",
+  "executable": "/home/arche-mage/Coding/Python/MyProjects/Fake-News-Detector/.venv/bin/python",
+  "cpu_count": 14,
+  "cpu_count_logical": 20,
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "1005867986944",
+      "used": "617088487424"
+    }
+  },
+  "memory": {
+    "total": "16476258304"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce RTX 4050 Laptop GPU",
+      "memoryTotal": "6439305216",
+      "cudaCores": 2560,
+      "architecture": "Ada",
+      "uuid": "GPU-73aa3ebd-3d1d-533f-328a-a0036c1ce4ec"
+    }
+  ],
+  "cudaVersion": "13.0",
+  "writerId": "22fiqcrmnz2xxm7kvaijxjsntgjxwsam"
+}
