@@ -12,9 +12,9 @@ First, create a JSON file with sample test examples from your dataset:
 
 ```bash
 python scripts/extract_test_samples.py \
-  --data_dir data/processed/kaggle_fake_real \
-  --num_samples 20 \
-  --out_file data/test/test_samples.json
+ --data_dir data/processed/kaggle_fake_real \
+ --num_samples 20 \
+ --out_file data/test/test_samples.json
 ```
 
 This will create `test_samples.json` with 20 real news articles and 20 fake news articles from your test set.
@@ -25,8 +25,8 @@ Run the Streamlit app with both the model directory and samples file:
 
 ```bash
 streamlit run src/fnd/web/app.py -- \
-  --model_dir runs/my-experiment/model \
-  --samples_file data/test/test_samples.json
+ --model_dir runs/my-experiment/model \
+ --samples_file data/test/test_samples.json
 ```
 
 ## Using the Web App
@@ -57,10 +57,11 @@ The sidebar displays test set metrics automatically loaded from `runs/roberta-kf
 4. The true label will be displayed in an info box
 5. **Click "Predict"** to see the model's prediction
 6. The result will show:
-   - ✅ **CORRECT** if the prediction matches the true label
-   - ❌ **Expected: [true_label]** if the prediction is wrong
-   - Prediction scores for all classes
-   - Confidence score (probability)
+
+- **CORRECT** if the prediction matches the true label
+- **Expected: [true_label]** if the prediction is wrong
+- Prediction scores for all classes
+- Confidence score (probability)
 
 ### Manual Testing
 
@@ -76,7 +77,7 @@ You can also:
 
 ```text
 Prediction Scores: {'fake': 0.0234, 'real': 0.9766}
-✅ Predicted: real (p=0.977) - CORRECT
+Predicted: real (p=0.977) - CORRECT
 ```
 
 - **Prediction Scores**: Probability for each class (should sum to ~1.0)
