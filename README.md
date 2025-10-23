@@ -75,7 +75,10 @@
 
 ### Web Interface (Streamlit)
 
-> **Note**: Screenshots will be added after training a model. The interface includes:
+> The interface includes:
+>
+> ![Streamlit Fake News Detector UI 1](docs/Screenshots/Streamlit-1.png)
+> ![Streamlit Fake News Detector UI 2](docs/Screenshots/Streamlit-2.png)
 >
 > - Real-time prediction with confidence scores
 > - Test sample browser with real/fake news examples
@@ -86,6 +89,8 @@
 ### API Documentation (FastAPI)
 
 > **Note**: Interactive API docs available at `/docs` endpoint showing:
+>
+> ![API Documentation](docs/Screenshots/API-1.png)
 >
 > - POST `/predict` - Text classification endpoint
 > - GET `/healthz` - Health check endpoint
@@ -227,7 +232,7 @@ Train a RoBERTa model with default settings:
 ```bash
 python -m fnd.training.train \
  --config config/config.yaml \
- --run_name my-first-model \
+ --run_name my-experiment \
  --paths_data_dir data/processed/kaggle_fake_real
 ```
 
@@ -257,8 +262,8 @@ Generate comprehensive evaluation metrics:
 ```bash
 python -m fnd.eval.evaluate \
  --config config/config.yaml \
- --model_dir runs/my-first-model/model \
- --out_dir runs/my-first-model \
+ --model_dir runs/my-experiment/model \
+ --out_dir runs/my-experiment \
  --paths_data_dir data/processed/kaggle_fake_real
 ```
 
@@ -289,7 +294,7 @@ python scripts/extract_test_samples.py \
 
 # Launch Streamlit app
 streamlit run src/fnd/web/app.py -- \
- --model_dir runs/my-first-model/model \
+ --model_dir runs/my-experiment/model \
  --samples_file data/test/test_samples.json
 ```
 
@@ -546,7 +551,7 @@ python -m fnd.training.train \
 Start the API server:
 
 ```bash
-export MODEL_DIR=runs/my-first-model/model
+export MODEL_DIR=runs/my-experiment/model
 uvicorn fnd.api.main:app --host 0.0.0.0 --port 8000
 ```
 
