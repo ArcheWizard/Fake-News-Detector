@@ -2,17 +2,14 @@
 
 These tests verify that the refactored scripts work correctly end-to-end.
 """
-import json
+
 import os
-import tempfile
-from pathlib import Path
 
 import pytest
-import yaml
 
 from fnd.config import FNDConfig
 from fnd.data.datasets import load_dataset
-from fnd.models.utils import load_model_and_tokenizer_from_dir, get_model_info
+from fnd.models.utils import get_model_info, load_model_and_tokenizer_from_dir
 
 
 class TestConfigIntegration:
@@ -23,11 +20,7 @@ class TestConfigIntegration:
         config_path = tmp_path / "test_config.yaml"
 
         # Create config
-        config = FNDConfig(
-            seed=123,
-            model_name="bert-base-uncased",
-            max_seq_length=128
-        )
+        config = FNDConfig(seed=123, model_name="bert-base-uncased", max_seq_length=128)
 
         # Save
         config.to_yaml(str(config_path))
@@ -50,10 +43,7 @@ class TestConfigIntegration:
 
         # Load with overrides
         loaded = FNDConfig.from_yaml_with_overrides(
-            str(config_path),
-            seed=999,
-            train_epochs=10,
-            train_batch_size=64
+            str(config_path), seed=999, train_epochs=10, train_batch_size=64
         )
 
         # Verify overrides applied
@@ -92,7 +82,7 @@ class TestDataLoadingIntegration:
             str(tmp_path),
             seed=config.seed,
             val_size=config.data.val_size,
-            test_size=config.data.test_size
+            test_size=config.data.test_size,
         )
 
         # Verify splits
@@ -147,12 +137,12 @@ class TestModelUtilitiesIntegration:
         assert tokenizer is not None
 
         # Verify model has expected attributes
-        assert hasattr(model, 'config')
-        assert hasattr(model, 'forward')
+        assert hasattr(model, "config")
+        assert hasattr(model, "forward")
 
         # Verify tokenizer has expected attributes
-        assert hasattr(tokenizer, 'encode')
-        assert hasattr(tokenizer, 'decode')
+        assert hasattr(tokenizer, "encode")
+        assert hasattr(tokenizer, "decode")
 
 
 class TestEndToEndWorkflow:
@@ -161,11 +151,7 @@ class TestEndToEndWorkflow:
     def test_config_creation_and_validation(self):
         """Test that config can be created and validated."""
         # Create config with custom values
-        config = FNDConfig(
-            seed=42,
-            model_name="bert-base-uncased",
-            max_seq_length=128
-        )
+        config = FNDConfig(seed=42, model_name="bert-base-uncased", max_seq_length=128)
 
         # Verify validation passes
         assert config.seed == 42

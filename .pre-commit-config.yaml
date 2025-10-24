@@ -1,13 +1,9 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 23.9.1
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4  # Use latest version
     hooks:
-      - id: black
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.291
-    hooks:
+      # Run linter
       - id: ruff
+        args: [--fix]
+      # Run formatter (replaces Black)
+      - id: ruff-format

@@ -1,4 +1,4 @@
-torch==2.9.0+cpu
+torch>=2.0.0
 transformers
 datasets
 scikit-learn
@@ -19,11 +19,15 @@ beautifulsoup4
 
 python-dotenv
 typer
+pyyaml
 
 # Testing
 pytest
 pytest-cov
 
-# Type stubs for better IDE support
+# Linting and formatting (Ruff only!)
+ruff
+
+# Type stubs
 types-PyYAML
 types-requests

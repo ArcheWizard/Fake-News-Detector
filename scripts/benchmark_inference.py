@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import statistics
 import time
-from typing import List, Optional
 
 import torch
 
@@ -32,9 +31,11 @@ def _now() -> float:
     return time.perf_counter()
 
 
-def _run_benchmark(model_dir: str, text: str, iters: int, warmup: int, device_arg: Optional[str]) -> dict:
+def _run_benchmark(
+    model_dir: str, text: str, iters: int, warmup: int, device_arg: str | None
+) -> dict:
     # Select device index for pipeline utility
-    device: Optional[int]
+    device: int | None
     if device_arg == "cpu":
         device = -1
     elif device_arg == "gpu":
@@ -42,13 +43,15 @@ def _run_benchmark(model_dir: str, text: str, iters: int, warmup: int, device_ar
     else:
         device = None
 
-    pipe = create_classification_pipeline(model_dir=model_dir, max_length=256, device=device, return_all_scores=True)
+    pipe = create_classification_pipeline(
+        model_dir=model_dir, max_length=256, device=device, return_all_scores=True
+    )
 
     # Warmup
     for _ in range(warmup):
         _ = pipe(text)
 
-    times: List[float] = []
+    times: list[float] = []
     for _ in range(iters):
         t0 = _now()
         _ = pipe(text)
@@ -71,10 +74,18 @@ def _run_benchmark(model_dir: str, text: str, iters: int, warmup: int, device_ar
 
 def main():
     parser = argparse.ArgumentParser(description="Benchmark inference latency")
-    parser.add_argument("--model_dir", help="Model directory (used if baseline/optimized not provided)")
+    parser.add_argument(
+        "--model_dir", help="Model directory (used if baseline/optimized not provided)"
+    )
     parser.add_argument("--baseline_dir", help="Baseline model directory", default=None)
-    parser.add_argument("--optimized_dir", help="Optimized model directory (quantized or pruned)", default=None)
-    parser.add_argument("--iters", type=int, default=50, help="Number of measured iterations")
+    parser.add_argument(
+        "--optimized_dir",
+        help="Optimized model directory (quantized or pruned)",
+        default=None,
+    )
+    parser.add_argument(
+        "--iters", type=int, default=50, help="Number of measured iterations"
+    )
     parser.add_argument("--warmup", type=int, default=5, help="Warmup iterations")
     parser.add_argument(
         "--device",
@@ -104,7 +115,10 @@ def main():
             parser.error("--model_dir is required when baseline/optimized not provided")
         runs.append(("single", args.model_dir))
 
-    print("Inference benchmark (iters=%d, warmup=%d, device=%s)" % (args.iters, args.warmup, args.device))
+    print(
+        f"Inference benchmark (iters={args.iters}, "
+        f"warmup={args.warmup}, device={args.device})"
+    )
     print("-" * 60)
 
     results = []
@@ -119,7 +133,9 @@ def main():
     if len(results) == 2:
         (_, base), (_, opt) = results
         if base and opt:
-            speedup = base["mean_ms"] / opt["mean_ms"] if opt["mean_ms"] > 0 else float("inf")
+            speedup = (
+                base["mean_ms"] / opt["mean_ms"] if opt["mean_ms"] > 0 else float("inf")
+            )
             print("-" * 60)
             print(f"Speedup (baseline/optimized): {speedup:.2f}x (mean latency)")
 

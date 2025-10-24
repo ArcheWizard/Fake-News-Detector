@@ -3,10 +3,10 @@
 This module provides a hierarchical configuration system using dataclasses,
 supporting both YAML file loading and command-line argument overrides.
 """
-import os
-from dataclasses import dataclass, field, asdict
+
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -34,6 +34,7 @@ class TrainConfig:
         load_best_model_at_end: Load best model at end of training
         metric_for_best_model: Metric to use for best model selection
     """
+
     epochs: int = 3
     batch_size: int = 16
     learning_rate: float = 2e-5
@@ -62,15 +63,25 @@ class TrainConfig:
         if self.epochs <= 0:
             raise ConfigurationError(f"epochs must be positive, got {self.epochs}")
         if self.batch_size <= 0:
-            raise ConfigurationError(f"batch_size must be positive, got {self.batch_size}")
+            raise ConfigurationError(
+                f"batch_size must be positive, got {self.batch_size}"
+            )
         if self.learning_rate <= 0:
-            raise ConfigurationError(f"learning_rate must be positive, got {self.learning_rate}")
+            raise ConfigurationError(
+                f"learning_rate must be positive, got {self.learning_rate}"
+            )
         if not 0 <= self.warmup_ratio <= 1:
-            raise ConfigurationError(f"warmup_ratio must be in [0, 1], got {self.warmup_ratio}")
+            raise ConfigurationError(
+                f"warmup_ratio must be in [0, 1], got {self.warmup_ratio}"
+            )
         if self.save_strategy not in {"epoch", "steps", "no"}:
-            raise ConfigurationError(f"save_strategy must be 'epoch', 'steps', or 'no', got {self.save_strategy}")
+            raise ConfigurationError(
+                f"save_strategy must be 'epoch', 'steps', or 'no', got {self.save_strategy}"
+            )
         if self.evaluation_strategy not in {"epoch", "steps", "no"}:
-            raise ConfigurationError(f"evaluation_strategy must be 'epoch', 'steps', or 'no', got {self.evaluation_strategy}")
+            raise ConfigurationError(
+                f"evaluation_strategy must be 'epoch', 'steps', or 'no', got {self.evaluation_strategy}"
+            )
         valid_schedulers = {
             "linear",
             "cosine",
@@ -84,10 +95,14 @@ class TrainConfig:
                 f"lr_scheduler_type must be one of {valid_schedulers}, got {self.lr_scheduler_type}"
             )
         if self.dataloader_num_workers < 0:
-            raise ConfigurationError(f"dataloader_num_workers must be >= 0, got {self.dataloader_num_workers}")
+            raise ConfigurationError(
+                f"dataloader_num_workers must be >= 0, got {self.dataloader_num_workers}"
+            )
         valid_optims = {"adamw_torch", "adamw_hf", "adamw_torch_fused", "adafactor"}
         if self.optim not in valid_optims:
-            raise ConfigurationError(f"optim must be one of {valid_optims}, got {self.optim}")
+            raise ConfigurationError(
+                f"optim must be one of {valid_optims}, got {self.optim}"
+            )
 
 
 @dataclass
@@ -99,18 +114,25 @@ class EvalConfig:
         batch_size: Evaluation batch size
         save_plots: Whether to save visualization plots (confusion matrix, ROC curve)
     """
-    metrics: List[str] = field(default_factory=lambda: ["accuracy", "f1", "precision", "recall", "roc_auc"])
+
+    metrics: list[str] = field(
+        default_factory=lambda: ["accuracy", "f1", "precision", "recall", "roc_auc"]
+    )
     batch_size: int = 32
     save_plots: bool = True
 
     def __post_init__(self):
         """Validate evaluation configuration."""
         if self.batch_size <= 0:
-            raise ConfigurationError(f"batch_size must be positive, got {self.batch_size}")
+            raise ConfigurationError(
+                f"batch_size must be positive, got {self.batch_size}"
+            )
         valid_metrics = {"accuracy", "f1", "precision", "recall", "roc_auc"}
         invalid = set(self.metrics) - valid_metrics
         if invalid:
-            raise ConfigurationError(f"Invalid metrics: {invalid}. Valid options: {valid_metrics}")
+            raise ConfigurationError(
+                f"Invalid metrics: {invalid}. Valid options: {valid_metrics}"
+            )
 
 
 @dataclass
@@ -126,12 +148,13 @@ class DataConfig:
         max_samples: Optional limit on total samples (None = all)
         shuffle: Whether to shuffle data before splitting
     """
+
     dataset: str = "kaggle_fake_real"
     text_field: str = "text"
     label_field: str = "label"
     val_size: float = 0.1
     test_size: float = 0.1
-    max_samples: Optional[int] = None
+    max_samples: int | None = None
     shuffle: bool = True
 
     def __post_init__(self):
@@ -139,11 +162,17 @@ class DataConfig:
         if not 0 <= self.val_size < 1:
             raise ConfigurationError(f"val_size must be in [0, 1), got {self.val_size}")
         if not 0 <= self.test_size < 1:
-            raise ConfigurationError(f"test_size must be in [0, 1), got {self.test_size}")
+            raise ConfigurationError(
+                f"test_size must be in [0, 1), got {self.test_size}"
+            )
         if self.val_size + self.test_size >= 1:
-            raise ConfigurationError(f"val_size + test_size must be < 1, got {self.val_size + self.test_size}")
+            raise ConfigurationError(
+                f"val_size + test_size must be < 1, got {self.val_size + self.test_size}"
+            )
         if self.max_samples is not None and self.max_samples <= 0:
-            raise ConfigurationError(f"max_samples must be positive or None, got {self.max_samples}")
+            raise ConfigurationError(
+                f"max_samples must be positive or None, got {self.max_samples}"
+            )
 
 
 @dataclass
@@ -155,6 +184,7 @@ class PathsConfig:
         runs_dir: Directory for training run outputs
         models_dir: Directory for saved models
     """
+
     data_dir: str = "data/processed/kaggle_fake_real"
     runs_dir: str = "runs"
     models_dir: str = "models"
@@ -201,6 +231,7 @@ class FNDConfig:
         ...     train=TrainConfig(epochs=5, batch_size=32)
         ... )
     """
+
     seed: int = 42
     model_name: str = "roberta-base"
     max_seq_length: int = 256
@@ -214,7 +245,9 @@ class FNDConfig:
         if self.seed < 0:
             raise ConfigurationError(f"seed must be non-negative, got {self.seed}")
         if self.max_seq_length <= 0:
-            raise ConfigurationError(f"max_seq_length must be positive, got {self.max_seq_length}")
+            raise ConfigurationError(
+                f"max_seq_length must be positive, got {self.max_seq_length}"
+            )
         if not self.model_name:
             raise ConfigurationError("model_name cannot be empty")
 
@@ -294,14 +327,16 @@ class FNDConfig:
 
             # Convert underscore notation to dot notation
             # train_epochs -> train.epochs
-            parts = key.split('_', 1)
+            parts = key.split("_", 1)
             if len(parts) == 2 and hasattr(config, parts[0]):
                 obj = getattr(config, parts[0])
                 attr_name = parts[1]
                 if hasattr(obj, attr_name):
                     setattr(obj, attr_name, value)
                 else:
-                    raise ConfigurationError(f"Invalid override key: {key} (no attribute '{attr_name}' in '{parts[0]}')")
+                    raise ConfigurationError(
+                        f"Invalid override key: {key} (no attribute '{attr_name}' in '{parts[0]}')"
+                    )
             elif hasattr(config, key):
                 setattr(config, key, value)
             else:
@@ -309,7 +344,7 @@ class FNDConfig:
 
         return config
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary.
 
         Returns:
@@ -334,5 +369,5 @@ class FNDConfig:
         yaml_path_obj = Path(yaml_path).expanduser()
         yaml_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(yaml_path_obj, 'w') as f:
+        with open(yaml_path_obj, "w") as f:
             yaml.dump(self.to_dict(), f, default_flow_style=False, sort_keys=False)

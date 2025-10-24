@@ -1,8 +1,7 @@
-import os
+import pytest
 
 from fnd.data.datasets import load_dataset
 from fnd.exceptions import DataLoadError
-import pytest
 
 
 def test_loader_raises_for_missing_dir(tmp_path):

@@ -19,3 +19,6 @@ runs/
 
 # Documentation
 docs/AI/
+
+# Linting and formatting
+.ruff_cache/

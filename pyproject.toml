@@ -5,24 +5,37 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fake-news-detector"
 version = "0.1.0"
-description = "Transformer-based fake news detector (BERT/RoBERTa) with Streamlit UI and FastAPI API"
+description = "Transformer-based fake news detector"
 requires-python = ">=3.10"
 readme = "README.md"
 authors = [{ name = "Your Name" }]
 dependencies = []
 
 [project.optional-dependencies]
-explain = [
-	"shap",
-	"lime",
-]
-tracking = [
-	"wandb",
-	"mlflow",
-]
+explain = ["shap", "lime"]
+tracking = ["wandb", "mlflow"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Ruff configuration (replaces Black + Isort + Flake8)
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+# Auto-fix safe rules
+fix = true
+
+[tool.ruff.format]
+# Use Black-compatible formatting
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+# Isort-compatible import sorting
+known-first-party = ["fnd"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]

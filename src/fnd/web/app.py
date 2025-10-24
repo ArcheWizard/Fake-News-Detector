@@ -1,7 +1,7 @@
 import argparse
 import json
 import os
-from typing import Any, Dict, List, Union, cast
+from typing import Any, cast
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -16,7 +16,7 @@ def load_pipeline(model_dir: str):
         model_dir=model_dir,
         max_length=256,
         device=None,  # Auto-detect
-        return_all_scores=True
+        return_all_scores=True,
     )
 
 
@@ -24,7 +24,7 @@ def load_pipeline(model_dir: str):
 def load_test_samples(samples_file: str = "test_samples.json"):
     """Load test samples if available."""
     if os.path.exists(samples_file):
-        with open(samples_file, "r") as f:
+        with open(samples_file) as f:
             return json.load(f)
     return None
 
@@ -36,15 +36,19 @@ def load_metrics(model_dir: str):
     metrics_path = os.path.join(parent_dir, "metrics.json")
 
     if os.path.exists(metrics_path):
-        with open(metrics_path, "r") as f:
+        with open(metrics_path) as f:
             return json.load(f)
     return None
 
 
 def main_cli():
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--model_dir", required=True, help="Path to saved model directory")
-    parser.add_argument("--samples_file", default="test_samples.json", help="Test samples JSON file")
+    parser.add_argument(
+        "--model_dir", required=True, help="Path to saved model directory"
+    )
+    parser.add_argument(
+        "--samples_file", default="test_samples.json", help="Test samples JSON file"
+    )
     args, _ = parser.parse_known_args()
     return args
 
@@ -68,7 +72,7 @@ def app():
         st.sidebar.metric("Test F1 Score", f"{metrics.get('eval_f1', 0):.3f}")
         st.sidebar.metric("Test Precision", f"{metrics.get('eval_precision', 0):.3f}")
         st.sidebar.metric("Test Recall", f"{metrics.get('eval_recall', 0):.3f}")
-        if 'eval_roc_auc' in metrics and metrics['eval_roc_auc'] is not None:
+        if "eval_roc_auc" in metrics and metrics["eval_roc_auc"] is not None:
             st.sidebar.metric("Test ROC AUC", f"{metrics['eval_roc_auc']:.3f}")
 
     clf = load_pipeline(args.model_dir)
@@ -82,8 +86,7 @@ def app():
         st.sidebar.title("Test Examples")
 
         sample_category = st.sidebar.selectbox(
-            "Select category",
-            ["None", "Real News", "Fake News"]
+            "Select category", ["None", "Real News", "Fake News"]
         )
 
         if sample_category != "None":
@@ -94,7 +97,7 @@ def app():
                 sample_idx = st.sidebar.selectbox(
                     "Select sample",
                     range(len(samples)),
-                    format_func=lambda x: f"Sample {x+1}"
+                    format_func=lambda x: f"Sample {x + 1}",
                 )
 
                 selected_sample = samples[sample_idx]
@@ -109,7 +112,7 @@ def app():
     text = st.text_area(
         "Enter news article text",
         height=200,
-        key="text_input"  # This directly binds to st.session_state.text_input
+        key="text_input",  # This directly binds to st.session_state.text_input
     )
 
     # Show true label if loaded from samples
@@ -128,11 +131,11 @@ def app():
         # Type-safe handling of pipeline output
         if isinstance(outputs, list) and len(outputs) > 0:
             # outputs can be either List[Dict[str, Any]] (top-1) or List[List[Dict[str, Any]]] (all scores)
-            first_item: Union[Dict[str, Any], List[Dict[str, Any]]] = outputs[0]
+            first_item: dict[str, Any] | list[dict[str, Any]] = outputs[0]
             if isinstance(first_item, dict):
-                output_list: List[Dict[str, Any]] = [cast(Dict[str, Any], first_item)]
+                output_list: list[dict[str, Any]] = [cast("dict[str, Any]", first_item)]
             else:
-                output_list = cast(List[Dict[str, Any]], first_item)
+                output_list = cast("list[dict[str, Any]]", first_item)
             # Sort by label for consistent display
             sorted_outputs = sorted(output_list, key=lambda x: str(x.get("label", "")))
 
@@ -152,9 +155,13 @@ def app():
             if st.session_state.true_label is not None:
                 true_label = st.session_state.true_label
                 if label_str.lower() == true_label.lower():
-                    st.success(f"✅ Predicted: **{label_str}** (p={score_float:.3f}) - CORRECT")
+                    st.success(
+                        f"✅ Predicted: **{label_str}** (p={score_float:.3f}) - CORRECT"
+                    )
                 else:
-                    st.error(f"❌ Predicted: **{label_str}** (p={score_float:.3f}) - Expected: {true_label}")
+                    st.error(
+                        f"❌ Predicted: **{label_str}** (p={score_float:.3f}) - Expected: {true_label}"
+                    )
             else:
                 st.success(f"Predicted: **{label_str}** (p={score_float:.3f})")
 
@@ -162,6 +169,7 @@ def app():
             if use_lime:
                 try:
                     from fnd.explain.lime_explain import explain_text_with_lime
+
                     with st.spinner("Computing LIME explanation..."):
                         exp, html = explain_text_with_lime(
                             args.model_dir,
@@ -181,7 +189,10 @@ def app():
             if use_shap:
                 try:
                     from fnd.explain.shap_explain import explain_text_with_shap
-                    explanation, _ = explain_text_with_shap(args.model_dir, text, max_seq_length=256)
+
+                    explanation, _ = explain_text_with_shap(
+                        args.model_dir, text, max_seq_length=256
+                    )
                     if explanation is not None:
                         st.subheader("SHAP Explanation")
                         st.write(explanation)

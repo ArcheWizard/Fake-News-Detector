@@ -1,6 +1,3 @@
-from typing import Optional
-
-
 def explain_text_with_shap(model_dir: str, text: str, max_seq_length: int = 256):
     """Optional SHAP explanation for a single text.
 
@@ -8,7 +5,7 @@ def explain_text_with_shap(model_dir: str, text: str, max_seq_length: int = 256)
     """
     try:
         import shap  # type: ignore
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+        from transformers import pipeline
 
         clf = pipeline(
             "text-classification",

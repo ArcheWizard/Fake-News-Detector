@@ -11,6 +11,7 @@ class FNDException(Exception):
     All custom exceptions in the FND project inherit from this base class,
     making it easy to catch any FND-specific error.
     """
+
     pass
 
 
@@ -23,6 +24,7 @@ class DataLoadError(FNDException):
         - Invalid data format
         - Corrupted data files
     """
+
     pass
 
 
@@ -34,6 +36,7 @@ class InsufficientDataError(DataLoadError):
         - Not enough samples for train/val/test split
         - Insufficient samples per class for stratification
     """
+
     pass
 
 
@@ -46,6 +49,7 @@ class ModelLoadError(FNDException):
         - Incompatible model architecture
         - Corrupted model weights
     """
+
     pass
 
 
@@ -58,6 +62,7 @@ class ConfigurationError(FNDException):
         - Missing required configuration fields
         - YAML parsing errors
     """
+
     pass
 
 
@@ -70,6 +75,7 @@ class EvaluationError(FNDException):
         - Missing ground truth labels
         - Incompatible model output format
     """
+
     pass
 
 
@@ -81,4 +87,5 @@ class ExplainabilityError(FNDException):
         - Incompatible model for explanation
         - Explanation computation timeout
     """
+
     pass

@@ -1,15 +1,10 @@
 """Comprehensive tests for configuration module."""
-import pytest
-import tempfile
+
 from pathlib import Path
 
-from fnd.config import (
-    FNDConfig,
-    TrainConfig,
-    EvalConfig,
-    DataConfig,
-    PathsConfig,
-)
+import pytest
+
+from fnd.config import DataConfig, EvalConfig, FNDConfig, PathsConfig, TrainConfig
 from fnd.exceptions import ConfigurationError
 
 
@@ -216,10 +211,7 @@ class TestCLIOverrides:
         yaml_file = tmp_path / "config.yaml"
         yaml_file.write_text(yaml_content)
 
-        config = FNDConfig.from_yaml_with_overrides(
-            str(yaml_file),
-            seed=999
-        )
+        config = FNDConfig.from_yaml_with_overrides(str(yaml_file), seed=999)
 
         assert config.seed == 999
 
@@ -234,9 +226,7 @@ train:
         yaml_file.write_text(yaml_content)
 
         config = FNDConfig.from_yaml_with_overrides(
-            str(yaml_file),
-            train_epochs=10,
-            train_batch_size=64
+            str(yaml_file), train_epochs=10, train_batch_size=64
         )
 
         assert config.train.epochs == 10
@@ -249,10 +239,7 @@ train:
         yaml_file.write_text(yaml_content)
 
         config = FNDConfig.from_yaml_with_overrides(
-            str(yaml_file),
-            train_epochs=5,
-            eval_batch_size=128,
-            data_val_size=0.2
+            str(yaml_file), train_epochs=5, eval_batch_size=128, data_val_size=0.2
         )
 
         assert config.train.epochs == 5
@@ -265,10 +252,7 @@ train:
         yaml_file.write_text("seed: 42")
 
         with pytest.raises(ConfigurationError, match="Invalid override key"):
-            FNDConfig.from_yaml_with_overrides(
-                str(yaml_file),
-                invalid_key=123
-            )
+            FNDConfig.from_yaml_with_overrides(str(yaml_file), invalid_key=123)
 
     def test_override_none_values_ignored(self, tmp_path):
         """Test that None override values are ignored."""
@@ -278,8 +262,8 @@ train:
 
         config = FNDConfig.from_yaml_with_overrides(
             str(yaml_file),
-            seed=None,  # Should be ignored
-            train_epochs=5
+            seed=None,
+            train_epochs=5,  # Should be ignored
         )
 
         assert config.seed == 42  # Not overridden
@@ -320,7 +304,7 @@ class TestYAMLSaving:
             model_name="roberta-large",
             max_seq_length=512,
             train=TrainConfig(epochs=10, batch_size=8),
-            data=DataConfig(val_size=0.2, test_size=0.2)
+            data=DataConfig(val_size=0.2, test_size=0.2),
         )
 
         yaml_file = tmp_path / "roundtrip.yaml"

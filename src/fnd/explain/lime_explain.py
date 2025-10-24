@@ -1,5 +1,4 @@
 """LIME explanation utilities for text classification."""
-from typing import List, Optional, Tuple
 
 from fnd.models.utils import create_classification_pipeline
 
@@ -12,7 +11,7 @@ def explain_text_with_lime(
     num_features: int = 10,
     num_samples: int = 500,
     random_state: int = 0,
-) -> Tuple[Optional[object], Optional[str]]:
+) -> tuple[object | None, str | None]:
     """Generate a LIME explanation for a single text.
 
     Returns (exp, html) or (None, None) if LIME is unavailable.
@@ -26,8 +25,8 @@ def explain_text_with_lime(
         raise ValueError("Input text must be a non-empty string")
 
     # Lazy import to keep LIME optional
-    from lime.lime_text import LimeTextExplainer  # type: ignore
     import numpy as np  # type: ignore
+    from lime.lime_text import LimeTextExplainer  # type: ignore
 
     # Create pipeline (return_all_scores=True ensures per-class scores)
     clf = create_classification_pipeline(
@@ -42,9 +41,9 @@ def explain_text_with_lime(
     if not class_names:
         class_names = ["real", "fake"]
 
-    def predict_proba(texts: List[str]):
+    def predict_proba(texts: list[str]):
         """LIME-compatible predict_proba: List[str] -> np.array[n, k]."""
-        rows: List[List[float]] = []
+        rows: list[list[float]] = []
         for t in texts:
             out = clf(t)
 
@@ -52,7 +51,10 @@ def explain_text_with_lime(
             items = _normalize_single_output(out)
 
             # Map label -> score (lowercased)
-            score_map = {str(d.get("label", "")).lower(): float(d.get("score", 0.0)) for d in items}
+            score_map = {
+                str(d.get("label", "")).lower(): float(d.get("score", 0.0))
+                for d in items
+            }
 
             # Align to class_names order
             probs = [score_map.get(name, 0.0) for name in class_names]
@@ -75,9 +77,9 @@ def explain_text_with_lime(
     return exp, exp.as_html()
 
 
-def _discover_class_names(clf) -> List[str]:
+def _discover_class_names(clf) -> list[str]:
     """Try to infer class names from model config or a probe call."""
-    names: List[str] = []
+    names: list[str] = []
 
     model = getattr(clf, "model", None)
     config = getattr(model, "config", None)
@@ -93,7 +95,7 @@ def _discover_class_names(clf) -> List[str]:
     if isinstance(id2label, dict) and id2label:
         keys = sorted(id2label.keys(), key=_to_int_safe)
         names = [str(id2label[k]).lower() for k in keys]
-    elif isinstance(id2label, (list, tuple)) and len(id2label) > 0:
+    elif isinstance(id2label, list | tuple) and len(id2label) > 0:
         names = [str(x).lower() for x in id2label]
 
     # Fall back to probing the pipeline output
@@ -102,12 +104,15 @@ def _discover_class_names(clf) -> List[str]:
         items = _normalize_single_output(probe)
         if items and isinstance(items[0], dict) and "label" in items[0]:
             # Sort labels for deterministic ordering
-            names = [str(d["label"]).lower() for d in sorted(items, key=lambda d: str(d.get("label", "")))]
+            names = [
+                str(d["label"]).lower()
+                for d in sorted(items, key=lambda d: str(d.get("label", "")))
+            ]
 
     return names
 
 
-def _normalize_single_output(out) -> List[dict]:
+def _normalize_single_output(out) -> list[dict]:
     """Normalize pipeline output to a single-sample List[Dict[label, score]]."""
     # Expected shapes:
     # - Single input with return_all_scores=True: List[List[Dict]]
@@ -121,4 +126,6 @@ def _normalize_single_output(out) -> List[dict]:
         if isinstance(first, list):
             # Take first (we call pipeline per-single text in predict_proba)
             return first
-    raise ValueError(f"Unexpected pipeline output shape: {type(out)} -> {repr(out)[:200]}")
+    raise ValueError(
+        f"Unexpected pipeline output shape: {type(out)} -> {repr(out)[:200]}"
+    )

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Dict
-from sklearn.metrics import accuracy_score, f1_score, precision_recall_fscore_support, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_recall_fscore_support,
+    roc_auc_score,
+)
 
 
 def _softmax(x: np.ndarray) -> np.ndarray:
@@ -34,7 +37,7 @@ def _softmax(x: np.ndarray) -> np.ndarray:
     return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
 
-def compute_metrics(eval_pred) -> Dict[str, float]:
+def compute_metrics(eval_pred) -> dict[str, float]:
     """Compute comprehensive classification metrics for binary fake news detection.
 
     Calculates accuracy, precision, recall, F1-score, and ROC AUC for model
@@ -88,7 +91,9 @@ def compute_metrics(eval_pred) -> Dict[str, float]:
     probs = _softmax(np.array(logits))
     preds = np.argmax(probs, axis=1)
     acc = accuracy_score(labels, preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average="binary", zero_division=0)
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        labels, preds, average="binary", zero_division=0
+    )
 
     # ROC AUC (only if both classes present)
     roc_auc = None
