@@ -1,6 +1,7 @@
 """Comprehensive tests for training metrics computation."""
 
 import numpy as np
+import pytest
 
 from fnd.training.metrics import _softmax, compute_metrics
 
@@ -196,6 +197,7 @@ class TestComputeMetrics:
                 f"{key} is not a float: {type(value)}"
             )
 
+    @pytest.mark.filterwarnings("ignore::sklearn.exceptions.UndefinedMetricWarning")
     def test_roc_auc_with_single_class_labels(self):
         """Test that ROC AUC handles case with only one class present."""
         logits = np.array([[10.0, 0.0], [10.0, 0.0], [10.0, 0.0]])
@@ -265,6 +267,7 @@ class TestComputeMetrics:
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
+    @pytest.mark.filterwarnings("ignore::sklearn.exceptions.UndefinedMetricWarning")
     def test_single_sample(self):
         """Test metrics with only one sample."""
         logits = np.array([[10.0, 0.0]])

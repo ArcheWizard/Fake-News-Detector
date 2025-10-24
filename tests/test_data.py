@@ -1,9 +1,280 @@
+"""Comprehensive tests for data loading and preprocessing."""
+
+import pandas as pd
 import pytest
 
-from fnd.data.datasets import load_dataset
+from fnd.data.datasets import (
+    ID2LABEL,
+    LABEL2ID,
+    DatasetBundle,
+    _read_kfr_raw_dir,
+    _read_processed_csv,
+    load_dataset,
+    load_kaggle_fake_real,
+)
 from fnd.exceptions import DataLoadError
 
 
-def test_loader_raises_for_missing_dir(tmp_path):
-    with pytest.raises(DataLoadError):
-        load_dataset("kaggle_fake_real", str(tmp_path / "does_not_exist"))
+# -------------------------------------------------------------------------
+# DatasetBundle structure tests
+# -------------------------------------------------------------------------
+class TestDatasetBundle:
+    """Tests for DatasetBundle dataclass."""
+
+    def test_dataset_bundle_structure(self):
+        """Ensure DatasetBundle has expected attributes."""
+        train_df = pd.DataFrame({"text": ["sample"], "label": [0]})
+        val_df = pd.DataFrame({"text": ["sample"], "label": [1]})
+        test_df = pd.DataFrame({"text": ["sample"], "label": [0]})
+
+        bundle = DatasetBundle(
+            train_df=train_df,
+            validation_df=val_df,
+            test_df=test_df,
+            label2id=LABEL2ID,
+            id2label=ID2LABEL,
+        )
+
+        assert bundle.train_df is not None
+        assert bundle.validation_df is not None
+        assert bundle.test_df is not None
+        assert bundle.label2id == {"real": 0, "fake": 1}
+        assert bundle.id2label == {0: "real", 1: "fake"}
+
+
+# -------------------------------------------------------------------------
+# Kaggle Fake/Real dataset tests
+# -------------------------------------------------------------------------
+class TestLoadKaggleFakeReal:
+    """Tests for loading Kaggle Fake/Real dataset."""
+
+    def test_load_from_raw_csv_files(self, tmp_path):
+        """Load dataset from raw True/Fake CSV files."""
+        true_df = pd.DataFrame(
+            {
+                "title": [f"True Title {i}" for i in range(60)],
+                "text": [f"True text {i}" for i in range(60)],
+                "subject": ["news"] * 60,
+                "date": ["2020-01-01"] * 60,
+            }
+        )
+        fake_df = pd.DataFrame(
+            {
+                "title": [f"Fake Title {i}" for i in range(60)],
+                "text": [f"Fake text {i}" for i in range(60)],
+                "subject": ["politics"] * 60,
+                "date": ["2020-01-01"] * 60,
+            }
+        )
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+
+        bundle = load_kaggle_fake_real(str(tmp_path), seed=42)
+
+        assert isinstance(bundle, DatasetBundle)
+        assert len(bundle.train_df) > 0
+        assert len(bundle.validation_df) > 0
+        assert len(bundle.test_df) > 0
+        assert set(bundle.train_df["label"].unique()).issubset({0, 1})
+
+    def test_load_from_processed_csv(self, tmp_path):
+        """Load dataset from preprocessed dataset.csv."""
+        df = pd.DataFrame(
+            {"text": [f"Sample text {i}" for i in range(100)], "label": [0, 1] * 50}
+        )
+        df.to_csv(tmp_path / "dataset.csv", index=False)
+        bundle = load_kaggle_fake_real(str(tmp_path), seed=42)
+
+        total_samples = (
+            len(bundle.train_df) + len(bundle.validation_df) + len(bundle.test_df)
+        )
+        assert total_samples == 100
+
+    def test_stratified_split_maintains_class_balance(self, tmp_path):
+        """Ensure splits roughly maintain class balance."""
+        true_df = pd.DataFrame(
+            {
+                "title": [f"True {i}" for i in range(50)],
+                "text": [f"True text {i}" for i in range(50)],
+            }
+        )
+        fake_df = pd.DataFrame(
+            {
+                "title": [f"Fake {i}" for i in range(50)],
+                "text": [f"Fake text {i}" for i in range(50)],
+            }
+        )
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+        bundle = load_kaggle_fake_real(
+            str(tmp_path), seed=42, val_size=0.2, test_size=0.2
+        )
+
+        for name, df in [
+            ("train", bundle.train_df),
+            ("validation", bundle.validation_df),
+            ("test", bundle.test_df),
+        ]:
+            if len(df) > 0:
+                real, fake = (df["label"] == 0).sum(), (df["label"] == 1).sum()
+                if fake > 0:
+                    ratio = real / fake
+                    assert 0.5 < ratio < 2.0, f"{name} split imbalance: {ratio}"
+
+    def test_max_samples_limits_dataset_size(self, tmp_path):
+        """Ensure max_samples limits dataset size."""
+        true_df = pd.DataFrame(
+            {
+                "title": [f"True {i}" for i in range(100)],
+                "text": [f"True text {i}" for i in range(100)],
+            }
+        )
+        fake_df = pd.DataFrame(
+            {
+                "title": [f"Fake {i}" for i in range(100)],
+                "text": [f"Fake text {i}" for i in range(100)],
+            }
+        )
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+        bundle = load_kaggle_fake_real(str(tmp_path), seed=42, max_samples=50)
+
+        total_samples = (
+            len(bundle.train_df) + len(bundle.validation_df) + len(bundle.test_df)
+        )
+        assert total_samples == 50
+
+    def test_empty_text_entries_filtered_out(self, tmp_path):
+        """Entries with empty text should be removed."""
+        true_df = pd.DataFrame(
+            {
+                "title": [f"Title {i}" if i % 10 != 0 else "" for i in range(60)],
+                "text": [f"Text {i}" if i % 10 != 0 else "" for i in range(60)],
+            }
+        )
+        fake_df = pd.DataFrame(
+            {
+                "title": [f"Fake {i}" if i % 10 != 0 else "" for i in range(60)],
+                "text": [f"Fake text {i}" if i % 10 != 0 else "" for i in range(60)],
+            }
+        )
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+        bundle = load_kaggle_fake_real(str(tmp_path), seed=42)
+        total_samples = (
+            len(bundle.train_df) + len(bundle.validation_df) + len(bundle.test_df)
+        )
+        assert total_samples == 108
+
+    def test_reproducible_splits_with_same_seed(self, tmp_path):
+        """Same seed → identical splits."""
+        true_df = pd.DataFrame(
+            {
+                "title": [f"True {i}" for i in range(50)],
+                "text": [f"True text {i}" for i in range(50)],
+            }
+        )
+        fake_df = pd.DataFrame(
+            {
+                "title": [f"Fake {i}" for i in range(50)],
+                "text": [f"Fake text {i}" for i in range(50)],
+            }
+        )
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+        b1 = load_kaggle_fake_real(str(tmp_path), seed=42)
+        b2 = load_kaggle_fake_real(str(tmp_path), seed=42)
+        pd.testing.assert_frame_equal(b1.train_df, b2.train_df)
+        pd.testing.assert_frame_equal(b1.validation_df, b2.validation_df)
+        pd.testing.assert_frame_equal(b1.test_df, b2.test_df)
+
+    def test_different_seeds_produce_different_splits(self, tmp_path):
+        """Different seeds → different splits."""
+        true_df = pd.DataFrame(
+            {
+                "title": [f"True {i}" for i in range(50)],
+                "text": [f"True text {i}" for i in range(50)],
+            }
+        )
+        fake_df = pd.DataFrame(
+            {
+                "title": [f"Fake {i}" for i in range(50)],
+                "text": [f"Fake text {i}" for i in range(50)],
+            }
+        )
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+        b1 = load_kaggle_fake_real(str(tmp_path), seed=42)
+        b2 = load_kaggle_fake_real(str(tmp_path), seed=123)
+        assert not (
+            b1.train_df.equals(b2.train_df)
+            and b1.validation_df.equals(b2.validation_df)
+            and b1.test_df.equals(b2.test_df)
+        )
+
+    def test_raises_error_for_missing_directory(self, tmp_path):
+        with pytest.raises(DataLoadError):
+            load_kaggle_fake_real(str(tmp_path / "does_not_exist"))
+
+    def test_raises_error_for_missing_csv_files(self, tmp_path):
+        data_dir = tmp_path / "empty_dir"
+        data_dir.mkdir()
+        with pytest.raises(DataLoadError):
+            load_kaggle_fake_real(str(data_dir))
+
+
+# -------------------------------------------------------------------------
+# Helper function tests
+# -------------------------------------------------------------------------
+class TestReadKFRRawDir:
+    """Tests for _read_kfr_raw_dir helper function."""
+
+    def test_combines_title_and_text(self, tmp_path):
+        true_df = pd.DataFrame({"title": ["Title 1"], "text": ["Text 1"]})
+        fake_df = pd.DataFrame({"title": ["Title 2"], "text": ["Text 2"]})
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+        df = _read_kfr_raw_dir(str(tmp_path))
+        assert "Title 1\n\nText 1" in df["text"].values
+        assert "Title 2\n\nText 2" in df["text"].values
+
+    def test_assigns_correct_labels(self, tmp_path):
+        true_df = pd.DataFrame({"title": ["True"], "text": ["Text"]})
+        fake_df = pd.DataFrame({"title": ["Fake"], "text": ["Text"]})
+        true_df.to_csv(tmp_path / "True.csv", index=False)
+        fake_df.to_csv(tmp_path / "Fake.csv", index=False)
+        df = _read_kfr_raw_dir(str(tmp_path))
+        assert df.loc[df["text"].str.contains("True"), "label"].iloc[0] == 0
+        assert df.loc[df["text"].str.contains("Fake"), "label"].iloc[0] == 1
+
+
+class TestReadProcessedCSV:
+    """Tests for _read_processed_csv helper function."""
+
+    def test_reads_existing_processed_csv(self, tmp_path):
+        df = pd.DataFrame({"text": ["Sample 1", "Sample 2"], "label": [0, 1]})
+        df.to_csv(tmp_path / "dataset.csv", index=False)
+        result = _read_processed_csv(str(tmp_path))
+        assert result is not None
+        assert len(result) == 2
+        assert list(result.columns) == ["text", "label"]
+
+    def test_returns_none_for_missing_csv(self, tmp_path):
+        assert _read_processed_csv(str(tmp_path)) is None
+
+
+class TestLoadDataset:
+    """Tests for the generic load_dataset wrapper."""
+
+    def test_loads_kaggle_fake_real_dataset(self, tmp_path):
+        df = pd.DataFrame(
+            {"text": [f"Sample {i}" for i in range(120)], "label": [0, 1] * 60}
+        )
+        df.to_csv(tmp_path / "dataset.csv", index=False)
+        bundle = load_dataset("kaggle_fake_real", str(tmp_path), seed=42)
+        assert isinstance(bundle, DatasetBundle)
+        assert len(bundle.train_df) > 0
+
+    def test_raises_value_error_for_unknown_dataset(self, tmp_path):
+        with pytest.raises(ValueError, match="Unsupported dataset"):
+            load_dataset("unknown_dataset", str(tmp_path))
