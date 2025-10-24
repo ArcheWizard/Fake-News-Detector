@@ -40,3 +40,6 @@ line-ending = "auto"
 # Isort-compatible import sorting
 known-first-party = ["fnd"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
