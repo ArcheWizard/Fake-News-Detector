@@ -129,9 +129,9 @@ class TestLoadKaggleFakeReal:
                 fake_count = (df["label"] == 1).sum()
                 if fake_count > 0:
                     ratio = real_count / fake_count
-                    assert (
-                        0.5 < ratio < 2.0
-                    ), f"{df_name} split has severe class imbalance: {ratio}"
+                    assert 0.5 < ratio < 2.0, (
+                        f"{df_name} split has severe class imbalance: {ratio}"
+                    )
 
     def test_max_samples_limits_dataset_size(self, tmp_path):
         """Test that max_samples parameter correctly limits dataset size."""
@@ -257,9 +257,9 @@ class TestLoadKaggleFakeReal:
         val_equal = bundle1.validation_df.equals(bundle2.validation_df)
         test_equal = bundle1.test_df.equals(bundle2.test_df)
 
-        assert not (
-            train_equal and val_equal and test_equal
-        ), "Different seeds should produce different splits"
+        assert not (train_equal and val_equal and test_equal), (
+            "Different seeds should produce different splits"
+        )
 
 
 class TestReadKFRRawDir:

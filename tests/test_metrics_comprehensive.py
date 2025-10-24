@@ -192,9 +192,9 @@ class TestComputeMetrics:
         metrics = compute_metrics(eval_pred)
 
         for key, value in metrics.items():
-            assert isinstance(value, float) or np.isnan(
-                value
-            ), f"{key} is not a float: {type(value)}"
+            assert isinstance(value, float) or np.isnan(value), (
+                f"{key} is not a float: {type(value)}"
+            )
 
     def test_roc_auc_with_single_class_labels(self):
         """Test that ROC AUC handles case with only one class present."""
