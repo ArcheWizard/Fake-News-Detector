@@ -55,6 +55,9 @@ htmlcov/
 /runs/
 /models/
 wandb/
+wandb/*
+wandb/*.wandb
+wandb/*.log
 mlruns/
 
 # Logs

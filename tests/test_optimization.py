@@ -48,3 +48,10 @@ def test_prune_model_error():
     if hasattr(mod, "prune_model"):
         with pytest.raises(Exception):
             mod.prune_model(None)
+
+
+def test_quantize_model_handles_invalid_model():
+    mod = importlib.import_module("fnd.models.optimization")
+    if hasattr(mod, "quantize_model"):
+        with pytest.raises(Exception):
+            mod.quantize_model("not_a_model")

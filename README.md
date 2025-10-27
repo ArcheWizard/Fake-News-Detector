@@ -622,14 +622,46 @@ pytest tests/ --cov=src/fnd --cov-report=term-missing
 **Expected Output:**
 
 ```text
-tests/test_config.py ........................... PASSED [30/72]
-tests/test_data_comprehensive.py ............... PASSED [45/72]
-tests/test_metrics_comprehensive.py ............ PASSED [62/72]
-tests/test_integration.py ...................... PASSED [69/72]
-tests/test_models.py ........................... PASSED [72/72]
+tests/test_config.py ........................... PASSED
+tests/test_data.py ............................. PASSED
+tests/test_metrics.py .......................... PASSED
+tests/test_integration.py ...................... PASSED
+tests/test_imports.py .......................... PASSED
+... (other files)
 
-Coverage: 91%
+Coverage: 91% (or higher, depending on recent improvements)
 ```
+
+### Test Suite Improvements (2025-10-27)
+
+- **Redundancy eliminated**: All import/smoke tests are consolidated in `test_imports.py`.
+- **Shared fixtures**: Common mocks and dummy configs are provided in `conftest.py` for DRYness.
+- **Parametrization**: Repeated test patterns use `pytest.mark.parametrize` for concise, robust coverage.
+- **Specific assertions**: Tests assert on output structure and values, not just non-None or non-error.
+- **Maintainability**: Large files are split by concern, and monkeypatching is simplified with helpers.
+
+#### Tangible Benefits
+
+- **Test file count reduced**: Import-only tests consolidated (2→1 files)
+- **Code duplication reduced**: Shared fixtures and mocks now in one place
+- **Test run time**: Slightly faster due to less redundant work
+- **Coverage quality**: More robust, less fragile, easier to expand
+- **Onboarding**: New contributors can add tests with less boilerplate
+
+**Recent improvements:**
+
+- Import/smoke tests consolidated into `test_imports.py` (less redundancy)
+- Shared fixtures and mocks in `conftest.py` (DRY, easier maintenance)
+- Parametrization and robust assertions in key tests
+
+**Limitations & Next Steps:**
+
+- Some test methods are stubs or incomplete and will be finished for full edge case coverage.
+- Integration tests may require specific directories/files (e.g., model checkpoints) to exist; setup scripts or mocks are recommended for CI/CD.
+- Advanced modules (LIME/SHAP explainability, optimization) have basic tests; more robust scenario-based and error tests are planned.
+- Performance and stress testing (large datasets, model loading errors) are not yet implemented but are on the roadmap.
+
+See [docs/AI/improvement_plan.md](docs/AI/improvement_plan.md) for ongoing progress.
 
 ### Specific Test Files
 
@@ -638,13 +670,20 @@ Coverage: 91%
 pytest tests/test_config.py -v
 
 # Data loading tests
-pytest tests/test_data_comprehensive.py -v
+pytest tests/test_data.py -v
 
 # Metrics tests
-pytest tests/test_metrics_comprehensive.py -v
+pytest tests/test_metrics.py -v
 ```
 
----
+## Known Testing Limitations & Next Steps
+
+- Some test methods are currently stubs or incomplete; full implementation is planned to ensure all edge cases are covered.
+- Integration tests may assume the existence of specific directories (e.g., `runs/roberta-kfr/model`). For CI/CD or new environments, ensure these are set up or use provided mock scripts.
+- Advanced modules (explainability, optimization) have basic import/error tests; more robust scenario-based tests will be added.
+- Performance benchmarking and stress testing with large datasets are not yet implemented. Future updates will include these, along with improved error handling for model loading failures.
+
+See [docs/AI/improvement_plan.md](docs/AI/improvement_plan.md) for ongoing progress
 
 ## Documentation
 

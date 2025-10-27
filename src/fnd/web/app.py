@@ -35,6 +35,9 @@ def load_metrics(model_dir: str):
     parent_dir = os.path.dirname(model_dir)
     metrics_path = os.path.join(parent_dir, "metrics.json")
 
+    # Return None if model_dir does not exist
+    if not os.path.isdir(model_dir):
+        return None
     if os.path.exists(metrics_path):
         with open(metrics_path) as f:
             return json.load(f)
@@ -125,7 +128,8 @@ def app():
     use_lime = st.sidebar.checkbox("Show LIME explanation", value=False)
     use_shap = st.sidebar.checkbox("Show SHAP explanation", value=False)
 
-    if st.button("Predict") and text.strip():
+    # Prediction and explainability logic
+    try:
         outputs = clf(text)
 
         # Type-safe handling of pipeline output
@@ -200,6 +204,9 @@ def app():
                         st.info("SHAP produced no explanation for this text.")
                 except Exception as e:  # noqa: BLE001
                     st.warning(f"SHAP explanation unavailable: {e}")
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+        return
 
 
 if __name__ == "__main__":

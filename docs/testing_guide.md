@@ -120,6 +120,23 @@ Predicted: real (p=0.977) - CORRECT
 4. **Compare confidence**: High accuracy with low confidence might indicate overfitting
 5. **Document failures**: Keep track of misclassified examples for model improvement
 
+## Current Testing Limitations & Improvement Plan
+
+Recent improvements (2025-10-27):
+
+- Import/smoke tests consolidated into `test_imports.py` (less redundancy)
+- Shared fixtures and mocks in `conftest.py` (DRY, easier maintenance)
+- Parametrization and robust assertions in key tests
+
+While the project aims for comprehensive coverage, please note:
+
+- Some test methods are stubs or incomplete and will be finished for full edge case coverage.
+- Integration tests may require specific directories/files (e.g., model checkpoints) to exist; setup scripts or mocks are recommended for CI/CD.
+- Advanced modules (LIME/SHAP explainability, optimization) have basic tests; more robust scenario-based and error tests are planned.
+- Performance and stress testing (large datasets, model loading errors) are not yet implemented but are on the roadmap.
+
+Refer to [docs/AI/improvement_plan.md](AI/improvement_plan.md) for details and progress tracking.
+
 ## Next Steps
 
 After testing through the UI, you can:

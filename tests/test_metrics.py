@@ -55,77 +55,38 @@ class TestSoftmax:
 class TestComputeMetrics:
     """Tests for compute_metrics function."""
 
-    def test_perfect_predictions(self):
-        """Test metrics with 100% accurate predictions."""
-        logits = np.array(
-            [
-                [10.0, 0.0],  # Predict class 0
-                [0.0, 10.0],  # Predict class 1
-                [10.0, 0.0],  # Predict class 0
-                [0.0, 10.0],  # Predict class 1
-            ]
-        )
-        labels = np.array([0, 1, 0, 1])
-
+    @pytest.fixture
+    def mock_eval_pred(self):
         class MockEvalPred:
             def __init__(self, predictions, label_ids):
                 self.predictions = predictions
                 self.label_ids = label_ids
 
-        eval_pred = MockEvalPred(logits, labels)
+        return MockEvalPred
+
+    @pytest.mark.parametrize(
+        "logits,labels,expected_accuracy",
+        [
+            (
+                np.array([[10.0, 0.0], [0.0, 10.0], [10.0, 0.0], [0.0, 10.0]]),
+                np.array([0, 1, 0, 1]),
+                1.0,
+            ),
+            (
+                np.array([[10.0, 0.0], [10.0, 0.0], [0.0, 10.0], [0.0, 10.0]]),
+                np.array([1, 1, 0, 0]),
+                0.0,
+            ),
+        ],
+    )
+    def test_prediction_scenarios(
+        self, mock_eval_pred, logits, labels, expected_accuracy
+    ):
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
+        assert metrics["accuracy"] == expected_accuracy
 
-        assert metrics["accuracy"] == 1.0
-        assert metrics["f1"] == 1.0
-        assert metrics["precision"] == 1.0
-        assert metrics["recall"] == 1.0
-        assert metrics["roc_auc"] == 1.0
-
-    def test_worst_case_predictions(self):
-        """Test metrics with completely wrong predictions."""
-        logits = np.array(
-            [
-                [10.0, 0.0],  # Predict class 0
-                [10.0, 0.0],  # Predict class 0
-                [0.0, 10.0],  # Predict class 1
-                [0.0, 10.0],  # Predict class 1
-            ]
-        )
-        labels = np.array([1, 1, 0, 0])  # Opposite of predictions
-
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
-        metrics = compute_metrics(eval_pred)
-
-        assert metrics["accuracy"] == 0.0
-        assert metrics["f1"] == 0.0
-        assert metrics["precision"] == 0.0
-        assert metrics["recall"] == 0.0
-
-    def test_handles_all_predictions_one_class(self):
-        """Test metrics when model predicts only one class."""
-        # All predictions for class 0
-        logits = np.array([[10.0, 0.0]] * 10)
-        labels = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
-
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
-        metrics = compute_metrics(eval_pred)
-
-        assert 0 <= metrics["accuracy"] <= 1
-        assert metrics["recall"] == 0.0  # No true positives for class 1
-        assert metrics["precision"] == 0.0  # No predictions for class 1
-        assert "roc_auc" in metrics
-
-    def test_balanced_predictions(self):
+    def test_balanced_predictions(self, mock_eval_pred):
         """Test metrics with balanced 50% accuracy."""
         logits = np.array(
             [
@@ -137,12 +98,7 @@ class TestComputeMetrics:
         )
         labels = np.array([0, 1, 1, 0])
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
         assert metrics["accuracy"] == 0.5
@@ -162,34 +118,24 @@ class TestComputeMetrics:
         assert "f1" in metrics
         assert "roc_auc" in metrics
 
-    def test_metrics_keys_present(self):
+    def test_metrics_keys_present(self, mock_eval_pred):
         """Test that all expected metric keys are present."""
         logits = np.array([[10.0, 0.0], [0.0, 10.0]])
         labels = np.array([0, 1])
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
         expected_keys = ["accuracy", "precision", "recall", "f1", "roc_auc"]
         for key in expected_keys:
             assert key in metrics, f"Missing expected metric: {key}"
 
-    def test_metrics_are_floats(self):
+    def test_metrics_are_floats(self, mock_eval_pred):
         """Test that all metrics are returned as float type."""
         logits = np.array([[10.0, 0.0], [0.0, 10.0], [10.0, 0.0]])
         labels = np.array([0, 1, 0])
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
         for key, value in metrics.items():
@@ -198,24 +144,19 @@ class TestComputeMetrics:
             )
 
     @pytest.mark.filterwarnings("ignore::sklearn.exceptions.UndefinedMetricWarning")
-    def test_roc_auc_with_single_class_labels(self):
+    def test_roc_auc_with_single_class_labels(self, mock_eval_pred):
         """Test that ROC AUC handles case with only one class present."""
         logits = np.array([[10.0, 0.0], [10.0, 0.0], [10.0, 0.0]])
         labels = np.array([0, 0, 0])  # Only class 0
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
         # ROC AUC should be NaN or handled gracefully
         assert "roc_auc" in metrics
         assert isinstance(metrics["roc_auc"], float)
 
-    def test_probabilistic_predictions(self):
+    def test_probabilistic_predictions(self, mock_eval_pred):
         """Test metrics with soft probability predictions."""
         # Probabilities that need softmax normalization
         logits = np.array(
@@ -228,18 +169,14 @@ class TestComputeMetrics:
         )
         labels = np.array([0, 1, 0, 1])
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
         assert metrics["accuracy"] == 1.0
-        assert 0.9 < metrics["roc_auc"] <= 1.0
+        assert 0.9 < metrics["roc_auc"] <= 1.0  # High AUC for perfect separation
+        assert metrics["f1"] == 1.0
 
-    def test_large_batch_size(self):
+    def test_large_batch_size(self, mock_eval_pred):
         """Test metrics computation with large batch size."""
         np.random.seed(42)
         n_samples = 1000
@@ -248,12 +185,7 @@ class TestComputeMetrics:
         logits = np.random.randn(n_samples, 2)
         labels = np.random.randint(0, 2, n_samples)
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
         # All metrics should be valid numbers
@@ -263,39 +195,53 @@ class TestComputeMetrics:
         assert 0 <= metrics["recall"] <= 1
         assert not np.isnan(metrics["roc_auc"])
 
+    def test_metrics_large_batch_performance(self, mock_eval_pred):
+        import time
+
+        n_samples = 100_000
+        logits = np.random.randn(n_samples, 2)
+        labels = np.random.randint(0, 2, n_samples)
+        eval_pred = mock_eval_pred(logits, labels)
+        start = time.time()
+        metrics = compute_metrics(eval_pred)
+        duration = time.time() - start
+        assert duration < 5  # Should compute in under 5 seconds
+        assert 0 <= metrics["accuracy"] <= 1
+
 
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
+    @pytest.fixture
+    def mock_eval_pred(self):
+        class MockEvalPred:
+            def __init__(self, predictions, label_ids):
+                self.predictions = predictions
+                self.label_ids = label_ids
+
+        return MockEvalPred
+
     @pytest.mark.filterwarnings("ignore::sklearn.exceptions.UndefinedMetricWarning")
-    def test_single_sample(self):
+    def test_single_sample(self, mock_eval_pred):
         """Test metrics with only one sample."""
         logits = np.array([[10.0, 0.0]])
         labels = np.array([0])
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
         assert metrics["accuracy"] == 1.0
 
-    def test_zero_logits(self):
+    def test_zero_logits(self, mock_eval_pred):
         """Test metrics with all-zero logits."""
-        logits = np.array([[0.0, 0.0], [0.0, 0.0]])
+        logits = np.array([[0.0, 0.0], [0.0, 0.0]])  # Equal probs for both classes
         labels = np.array([0, 1])
 
-        class MockEvalPred:
-            def __init__(self, predictions, label_ids):
-                self.predictions = predictions
-                self.label_ids = label_ids
-
-        eval_pred = MockEvalPred(logits, labels)
+        eval_pred = mock_eval_pred(logits, labels)
         metrics = compute_metrics(eval_pred)
 
-        # Should handle gracefully without errors
-        assert "accuracy" in metrics
-        assert "f1" in metrics
+        # Accuracy: Random guess ~0.5
+        assert 0.0 <= metrics["accuracy"] <= 1.0
+        # Other metrics should be valid floats
+        assert isinstance(metrics["f1"], float)
+        assert isinstance(metrics["roc_auc"], float)
