@@ -111,11 +111,11 @@ def app():
                     st.session_state.true_label = selected_sample["label"]
                     st.rerun()
 
-    # Text input area - use key that matches session state variable
+    # Text input area
     text = st.text_area(
         "Enter news article text",
         height=200,
-        key="text_input",  # This directly binds to st.session_state.text_input
+        key="text_input",
     )
 
     # Show true label if loaded from samples
@@ -128,85 +128,90 @@ def app():
     use_lime = st.sidebar.checkbox("Show LIME explanation", value=False)
     use_shap = st.sidebar.checkbox("Show SHAP explanation", value=False)
 
-    # Prediction and explainability logic
-    try:
-        outputs = clf(text)
+    # Add Predict button
+    if st.button("Predict"):
+        try:
+            outputs = clf(text)
 
-        # Type-safe handling of pipeline output
-        if isinstance(outputs, list) and len(outputs) > 0:
-            # outputs can be either List[Dict[str, Any]] (top-1) or List[List[Dict[str, Any]]] (all scores)
-            first_item: dict[str, Any] | list[dict[str, Any]] = outputs[0]
-            if isinstance(first_item, dict):
-                output_list: list[dict[str, Any]] = [cast("dict[str, Any]", first_item)]
-            else:
-                output_list = cast("list[dict[str, Any]]", first_item)
-            # Sort by label for consistent display
-            sorted_outputs = sorted(output_list, key=lambda x: str(x.get("label", "")))
-
-            # Display all scores
-            scores_dict = {
-                str(item.get("label", "")): round(float(item.get("score", 0)), 4)
-                for item in sorted_outputs
-            }
-            st.write("**Prediction Scores:**", scores_dict)
-
-            # Get top prediction
-            top = max(sorted_outputs, key=lambda x: float(x.get("score", 0)))
-            label_str = str(top.get("label", ""))
-            score_float = float(top.get("score", 0))
-
-            # Check if prediction matches true label
-            if st.session_state.true_label is not None:
-                true_label = st.session_state.true_label
-                if label_str.lower() == true_label.lower():
-                    st.success(
-                        f"✅ Predicted: **{label_str}** (p={score_float:.3f}) - CORRECT"
-                    )
+            # Type-safe handling of pipeline output
+            if isinstance(outputs, list) and len(outputs) > 0:
+                # outputs can be either List[Dict[str, Any]] (top-1) or List[List[Dict[str, Any]]] (all scores)
+                first_item: dict[str, Any] | list[dict[str, Any]] = outputs[0]
+                if isinstance(first_item, dict):
+                    output_list: list[dict[str, Any]] = [
+                        cast("dict[str, Any]", first_item)
+                    ]
                 else:
-                    st.error(
-                        f"❌ Predicted: **{label_str}** (p={score_float:.3f}) - Expected: {true_label}"
-                    )
-            else:
-                st.success(f"Predicted: **{label_str}** (p={score_float:.3f})")
+                    output_list = cast("list[dict[str, Any]]", first_item)
+                # Sort by label for consistent display
+                sorted_outputs = sorted(
+                    output_list, key=lambda x: str(x.get("label", ""))
+                )
 
-            # Optional explainability
-            if use_lime:
-                try:
-                    from fnd.explain.lime_explain import explain_text_with_lime
+                # Display all scores
+                scores_dict = {
+                    str(item.get("label", "")): round(float(item.get("score", 0)), 4)
+                    for item in sorted_outputs
+                }
+                st.write("**Prediction Scores:**", scores_dict)
 
-                    with st.spinner("Computing LIME explanation..."):
-                        exp, html = explain_text_with_lime(
-                            args.model_dir,
-                            text,
-                            max_seq_length=256,
-                            num_features=10,
-                            num_samples=400,  # tune for speed/quality
+                # Get top prediction
+                top = max(sorted_outputs, key=lambda x: float(x.get("score", 0)))
+                label_str = str(top.get("label", ""))
+                score_float = float(top.get("score", 0))
+
+                # Check if prediction matches true label
+                if st.session_state.true_label is not None:
+                    true_label = st.session_state.true_label
+                    if label_str.lower() == true_label.lower():
+                        st.success(
+                            f"✅ Predicted: **{label_str}** (p={score_float:.3f}) - CORRECT"
                         )
-                    if html:
-                        st.subheader("LIME Explanation")
-                        components.html(html, height=400, scrolling=True)
                     else:
-                        st.info("LIME produced no HTML output for this text.")
-                except Exception as e:  # noqa: BLE001
-                    st.warning(f"LIME explanation unavailable: {e}")
+                        st.error(
+                            f"❌ Predicted: **{label_str}** (p={score_float:.3f}) - Expected: {true_label}"
+                        )
+                else:
+                    st.success(f"Predicted: **{label_str}** (p={score_float:.3f})")
 
-            if use_shap:
-                try:
-                    from fnd.explain.shap_explain import explain_text_with_shap
+                # Optional explainability
+                if use_lime:
+                    try:
+                        from fnd.explain.lime_explain import explain_text_with_lime
 
-                    explanation, _ = explain_text_with_shap(
-                        args.model_dir, text, max_seq_length=256
-                    )
-                    if explanation is not None:
-                        st.subheader("SHAP Explanation")
-                        st.write(explanation)
-                    else:
-                        st.info("SHAP produced no explanation for this text.")
-                except Exception as e:  # noqa: BLE001
-                    st.warning(f"SHAP explanation unavailable: {e}")
-    except Exception as e:
-        st.error(f"Prediction failed: {e}")
-        return
+                        with st.spinner("Computing LIME explanation..."):
+                            exp, html = explain_text_with_lime(
+                                args.model_dir,
+                                text,
+                                max_seq_length=256,
+                                num_features=10,
+                                num_samples=400,  # tune for speed/quality
+                            )
+                        if html:
+                            st.subheader("LIME Explanation")
+                            components.html(html, height=400, scrolling=True)
+                        else:
+                            st.info("LIME produced no HTML output for this text.")
+                    except Exception as e:  # noqa: BLE001
+                        st.warning(f"LIME explanation unavailable: {e}")
+
+                if use_shap:
+                    try:
+                        from fnd.explain.shap_explain import explain_text_with_shap
+
+                        explanation, _ = explain_text_with_shap(
+                            args.model_dir, text, max_seq_length=256
+                        )
+                        if explanation is not None:
+                            st.subheader("SHAP Explanation")
+                            st.write(explanation)
+                        else:
+                            st.info("SHAP produced no explanation for this text.")
+                    except Exception as e:  # noqa: BLE001
+                        st.warning(f"SHAP explanation unavailable: {e}")
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")
+            return
 
 
 if __name__ == "__main__":
